@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+/* Componentes compartilhados também usam classes Tailwind. */
+@source "../../../packages/ui/src";
+
+@theme {
+  --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif;
+}
+
+/*
+ * Tokens de design. Os valores de `--theme-*` abaixo são apenas o estado inicial (tema azul
+ * institucional); o motor de temas (@projacseg/theme) sobrescreve-os em <html> em tempo de execução.
+ * Os demais tokens são fixos e NÃO mudam com o tema.
+ */
+:root {
+  --theme-base: #0649a8;
+  --theme-tone-1: #1163bb;
+  --theme-tone-2: #1d7ecd;
+  --theme-tone-3: #2898e0;
+  --theme-tone-4: #33b2f2;
+  --theme-gradient: linear-gradient(
+    180deg,
+    #0649a8 0%,
+    #1163bb 25%,
+    #1d7ecd 50%,
+    #2898e0 75%,
+    #33b2f2 100%
+  );
+  --theme-gradient-soft: linear-gradient(180deg, #afc5e3, #bee6fb);
+  --theme-surface: #def3fd;
+  --theme-on-gradient: #ffffff;
+
+  --background: #fdfdfd;
+  --text-primary: #403933;
+  --text-secondary: #797979;
+  --text-muted: #969696;
+  --color-danger: #ff5058;
+  --color-warning: #e5a33c;
+  --color-success: #21966b;
+  --color-neutral: #9ca3af;
+  --border-color: #e9e9e9;
+  --radius-large: 22px;
+  --radius-medium: 12px;
+
+  color-scheme: light;
+}
+
+@layer base {
+  body {
+    min-height: 100vh;
+    background: var(--background);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  button,
+  input {
+    font: inherit;
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--theme-tone-2);
+    outline-offset: 4px;
+  }
+
+  /* Sobre o degradê o contorno usa a cor de texto do tema para manter contraste. */
+  [data-surface="gradient"] :focus-visible {
+    outline-color: var(--theme-on-gradient);
+  }
+
+  svg {
+    flex-shrink: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
+}

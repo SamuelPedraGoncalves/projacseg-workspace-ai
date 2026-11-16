@@ -1,0 +1,19 @@
+{
+  "name": "@projacseg/theme",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Motor de temas do Workspace AI: paleta de cinco tons, tokens CSS e persistência por colaborador.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "jsdom": "^31.0.1",
+    "typescript": "~6.0.3",
+    "vitest": "^5.1.0"
+  }
+}
