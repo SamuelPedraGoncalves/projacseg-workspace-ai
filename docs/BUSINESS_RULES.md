@@ -17,7 +17,14 @@ Status: **regras fundamentais aprovadas**; regras operacionais detalhadas **pend
 10. IDs de usuários, pipelines e campos personalizados não ficam fixos no código: são configuração por
     tenant (`TenantFieldMapping`).
 
-## Levantamento operacional (a homologar)
+## Levantamento operacional
+
+**Conferido em 16/11/2026** com os modelos exportados do Bitrix24 (ver [AUTOMACOES_ATUAIS.md](AUTOMACOES_ATUAIS.md)):
+75 robôs de tarefa habilitados, 57 em produção (18 só no ramo de homologação), consolidados em 19
+regras; 24 deles recriam a tarefa em laço. O motor ainda precisa de condições por campo, prazo relativo
+a data do negócio e encerramento por campo preenchido para representar todas.
+
+### Texto original do levantamento
 
 - Pipelines: **Automóvel** e **Demais Ramos**.
 - **75** configurações habilitadas de criação de tarefas, agrupadas em **26** regras operacionais

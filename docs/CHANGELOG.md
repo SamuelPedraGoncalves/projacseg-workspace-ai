@@ -2,6 +2,14 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
+## [0.4.1] — 16/11/2026 — Análise das automações atuais
+
+### Adicionado
+
+- `docs/AUTOMACOES_ATUAIS.md`: análise dos 15 modelos de automação exportados (75 robôs de tarefa
+  habilitados, 57 em produção, 19 regras, laços de recriação, controles de inatividade, campos).
+- `tools/bitrix-automations/analisar.mjs`: lê `.bpt` (zlib + PHP serialize) e reproduz a contagem.
+
 ## [0.4.0] — 16/11/2026 — Motor operacional, comunicação ativa e IA
 
 ### Adicionado

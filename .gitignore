@@ -27,3 +27,6 @@ apps/api/src/generated/
 
 # Catálogo de pipelines gerado na instalação (metadados do portal)
 apps/api/tenants/*.catalog.json
+
+# Exportações de automações do cliente (dados do portal) — não versionar
+*.bpt

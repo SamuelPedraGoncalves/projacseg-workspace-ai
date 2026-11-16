@@ -55,6 +55,6 @@ infrastructure/   Infraestrutura (futuro)
 ## Documentação
 
 [Projeto](docs/PROJECT.md) · [Arquitetura](docs/ARCHITECTURE.md) ·
-[Design system](docs/DESIGN_SYSTEM.md) · [Regras de negócio](docs/BUSINESS_RULES.md) ·
+[Design system](docs/DESIGN_SYSTEM.md) · [Regras de negócio](docs/BUSINESS_RULES.md) · [Automações atuais](docs/AUTOMACOES_ATUAIS.md) ·
 [Integrações](docs/INTEGRATIONS.md) · [Instalar no Bitrix24](docs/BITRIX24_SETUP.md) · [Segurança](docs/SECURITY.md) · [Roadmap](docs/ROADMAP.md) ·
 [Decisões](docs/DECISIONS.md) · [Changelog](docs/CHANGELOG.md)
