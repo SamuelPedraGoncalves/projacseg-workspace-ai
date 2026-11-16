@@ -83,8 +83,10 @@ src/
   app.ts, index.ts          montagem e inicialização
   config/env.ts             variáveis de ambiente validadas
   modules/health            GET /health
+  modules/web-app           serve o build do frontend (GET e POST do Bitrix24, fallback do SPA)
+  modules/assistant-bot     POST /bitrix24/events/assistant — eventos do bot do assistente
   modules/theme-preferences contrato + repositório em memória (sem rota HTTP ainda)
-  integrations/bitrix24     tipos e portas (interfaces) — sem implementação
+  integrations/bitrix24     tipos, portas (interfaces) e cliente REST usado pelo bot
 prisma/schema.prisma        RASCUNHO de modelagem, Prisma não instalado
 ```
 

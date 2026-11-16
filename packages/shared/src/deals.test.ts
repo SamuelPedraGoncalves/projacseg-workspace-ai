@@ -3,6 +3,7 @@ import { dealSchema, type Deal } from "./deals";
 import { filterDealsByView } from "./journey";
 
 const base: Omit<Deal, "id" | "status" | "priority"> = {
+  origin: "demo",
   clientName: "Cliente",
   branch: "Automóvel",
   nextAction: "Ação",

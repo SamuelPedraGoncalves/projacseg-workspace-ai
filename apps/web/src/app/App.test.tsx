@@ -1,6 +1,8 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { journeyRepository } from "../features/deals/deals-repository";
+import { DEMO_DEALS } from "../features/deals/demo-data";
 import { useThemeStore } from "../features/theme/theme-store";
 import { createDemoPlatform, type AssistantOpenResult, type Platform } from "../platform/platform";
 import { renderApp } from "../test/render-app";
@@ -22,6 +24,8 @@ beforeEach(() => {
   useThemeStore.getState().resetTheme();
 });
 
+afterEach(() => vi.restoreAllMocks());
+
 function bitrixPlatform(assistantResult: AssistantOpenResult = "opened") {
   const platform: Platform = {
     mode: "bitrix24",
@@ -34,6 +38,7 @@ function bitrixPlatform(assistantResult: AssistantOpenResult = "opened") {
     },
     openDealInCrm: vi.fn(),
     openAssistant: vi.fn(async () => assistantResult),
+    installer: { registerAssistant: vi.fn(async () => undefined), finish: vi.fn() },
   };
   return platform;
 }
@@ -46,7 +51,10 @@ describe("Dentro do Bitrix24", () => {
     expect(screen.queryByText("MC")).not.toBeInTheDocument();
   });
 
-  it("Abrir leva ao card do negócio no Bitrix24, sem diálogo", async () => {
+  it("Abrir leva ao card do negócio do CRM no Bitrix24, sem diálogo", async () => {
+    vi.spyOn(journeyRepository, "listDeals").mockResolvedValue(
+      DEMO_DEALS.map((deal) => ({ ...deal, origin: "crm" as const })),
+    );
     const user = userEvent.setup();
     const platform = bitrixPlatform();
     renderApp("/", platform);
@@ -55,6 +63,44 @@ describe("Dentro do Bitrix24", () => {
     );
     expect(platform.openDealInCrm).toHaveBeenCalledWith("1001");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("negócio fictício não abre card inexistente no portal", async () => {
+    const user = userEvent.setup();
+    const platform = bitrixPlatform();
+    renderApp("/", platform);
+    await user.click(
+      await screen.findByRole("button", { name: "Abrir negócio de Carlos Almeida" }),
+    );
+    const dialog = await screen.findByRole("dialog", { name: "Carlos Almeida" });
+    expect(
+      within(dialog).getByText("Negócio fictício: não existe no Bitrix24."),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: /Abrir no Bitrix24/ })).toBeDisabled();
+    expect(platform.openDealInCrm).not.toHaveBeenCalled();
+  });
+
+  it("página de instalação registra o assistente e conclui", async () => {
+    const platform = bitrixPlatform();
+    renderApp("/install", platform);
+    expect(await screen.findByText("Instalação concluída.")).toBeInTheDocument();
+    expect(platform.installer?.registerAssistant).toHaveBeenCalledWith(
+      `${window.location.origin}/bitrix24/events/assistant`,
+    );
+    expect(platform.installer?.finish).toHaveBeenCalledTimes(1);
+  });
+
+  it("falha no registro do bot permite concluir sem o assistente", async () => {
+    const user = userEvent.setup();
+    const platform = bitrixPlatform();
+    vi.mocked(platform.installer!.registerAssistant).mockRejectedValue(
+      new Error("insufficient_scope"),
+    );
+    renderApp("/install", platform);
+    expect(await screen.findByText("insufficient_scope")).toBeInTheDocument();
+    expect(platform.installer?.finish).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Concluir sem o assistente" }));
+    expect(platform.installer?.finish).toHaveBeenCalledTimes(1);
   });
 
   it("o assistente abre o chat do Bitrix24, sem o chat demonstrativo", async () => {
@@ -74,6 +120,13 @@ describe("Dentro do Bitrix24", () => {
     const dialog = await screen.findByRole("dialog", { name: "Assistente Projacseg" });
     expect(within(dialog).getByText(/ainda não está instalado neste portal/)).toBeInTheDocument();
     expect(within(dialog).queryByLabelText("Mensagem ao assistente")).not.toBeInTheDocument();
+  });
+});
+
+describe("Instalação fora do Bitrix24", () => {
+  it("explica que só funciona dentro do portal", () => {
+    renderApp("/install");
+    expect(screen.getByText(/só funciona dentro do portal/)).toBeInTheDocument();
   });
 });
 

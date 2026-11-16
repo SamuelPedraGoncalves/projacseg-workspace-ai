@@ -91,3 +91,25 @@ um portal real.
 
 O store do tema passou a ter `initialize(scope)`. Dentro do Bitrix24 o colaborador só é conhecido após
 `user.current`; o tema dele é aplicado antes da primeira renderização.
+
+## D-018 — A API serve o frontend no portal de testes
+
+O Bitrix24 abre aplicativos com `POST`. Em vez de exigir uma hospedagem específica, a própria API
+(Fastify + `@fastify/static`) serve o build e responde ao `POST` com o `index.html`. Um único processo
+(`pnpm portal`) atende o app e os eventos do bot.
+
+## D-019 — Bot registrado pelo navegador na instalação
+
+`imbot.register` é chamado pela página `/install` com a BX24 JS SDK (o administrador que instala já
+está autenticado). Evita guardar tokens OAuth no backend antes de existir banco e criptografia. A cada
+reinstalação o bot é atualizado (`imbot.update`), o que acompanha a troca de URL do túnel.
+
+## D-020 — Bot responde sem IA, de forma explícita
+
+Até a IA ser conectada, o bot responde com mensagem fixa dizendo que está em implantação. Não há
+respostas simuladas no chat do Bitrix24.
+
+## D-021 — Negócios têm `origin`
+
+`demo` (fictício) ou `crm` (lido do portal). Só `crm` abre o card no Bitrix24, para nunca abrir um
+negócio inexistente (ou de outro cliente) a partir de um ID fictício.

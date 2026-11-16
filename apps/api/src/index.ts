@@ -1,6 +1,13 @@
 import { buildApp } from "./app";
 import { loadEnv } from "./config/env";
 
+// Carrega apps/api/.env quando existir (Node 22+). Variáveis já definidas no ambiente prevalecem.
+try {
+  process.loadEnvFile();
+} catch {
+  // Sem .env: segue com o ambiente atual.
+}
+
 const env = loadEnv();
 const app = await buildApp(env);
 

@@ -34,6 +34,7 @@ Abra http://localhost:5173.
 | `pnpm test:e2e`  | Testes de interface (Playwright, desktop 1649×928 e mobile)        |
 | `pnpm build`     | Build de produção (web em `apps/web/dist`, api em `apps/api/dist`) |
 | `pnpm format`    | Prettier                                                           |
+| `pnpm portal`    | Build + API servindo o app para o Bitrix24 (porta 3333)            |
 
 ## Estrutura
 
@@ -51,5 +52,5 @@ infrastructure/   Infraestrutura (futuro)
 
 [Projeto](docs/PROJECT.md) · [Arquitetura](docs/ARCHITECTURE.md) ·
 [Design system](docs/DESIGN_SYSTEM.md) · [Regras de negócio](docs/BUSINESS_RULES.md) ·
-[Integrações](docs/INTEGRATIONS.md) · [Segurança](docs/SECURITY.md) · [Roadmap](docs/ROADMAP.md) ·
+[Integrações](docs/INTEGRATIONS.md) · [Instalar no Bitrix24](docs/BITRIX24_SETUP.md) · [Segurança](docs/SECURITY.md) · [Roadmap](docs/ROADMAP.md) ·
 [Decisões](docs/DECISIONS.md) · [Changelog](docs/CHANGELOG.md)

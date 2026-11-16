@@ -36,6 +36,16 @@
   instalação.
 - Scripts de instalação bloqueados por padrão; apenas `esbuild` foi aprovado (`pnpm approve-builds`).
 
+## Aplicativo no portal de testes
+
+- Eventos do bot aceitos só de `BITRIX24_ALLOWED_DOMAINS`; resposta só para `https://<domínio>/rest/`
+  (impede usar o servidor para chamar outros endereços).
+- `application_token` memorizado no primeiro evento de cada portal (em memória até o banco existir)
+  ou fixado por `BITRIX24_APPLICATION_TOKEN`.
+- O corpo do `POST` do Bitrix24 no handler (com `AUTH_ID`) é ignorado e nunca devolvido nem registrado.
+- Iframe liberado só para os portais autorizados (`frame-ancestors`).
+- Túnel de testes expõe a máquina na internet: encerrar ao fim dos testes.
+
 ## Pendências
 
 - Política de retenção e criptografia dos tokens OAuth.

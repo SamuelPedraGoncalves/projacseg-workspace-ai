@@ -3,6 +3,7 @@ import { ExternalLink } from "lucide-react";
 import { useId } from "react";
 import { useUiStore } from "../../app/ui-store";
 import { usePlatform } from "../../platform/platform-context";
+import { canOpenInCrm } from "../../platform/use-workspace-actions";
 import { useDeals } from "./queries";
 
 /** Conteúdo do diálogo de detalhes do negócio selecionado. */
@@ -10,7 +11,7 @@ export function DealDetailsDialogContent() {
   const selectedDealId = useUiStore((state) => state.selectedDealId);
   const { data: deals } = useDeals();
   const crmHintId = useId();
-  const { openDealInCrm } = usePlatform();
+  const platform = usePlatform();
   const deal = deals?.find((item) => item.id === selectedDealId);
 
   if (!deal) {
@@ -26,7 +27,11 @@ export function DealDetailsDialogContent() {
     ["Próxima ação", deal.nextAction],
     ["Prazo", deal.deadlineLabel],
   ];
-  const crmAvailable = openDealInCrm !== null;
+  const crmAvailable = canOpenInCrm(platform, deal);
+  const crmHint =
+    deal.origin === "demo"
+      ? "Negócio fictício: não existe no Bitrix24."
+      : "Disponível quando o Workspace é aberto dentro do Bitrix24.";
 
   return (
     <DialogContent title={deal.clientName} description={`Negócio #${deal.id}`}>
@@ -52,21 +57,23 @@ export function DealDetailsDialogContent() {
           variant="secondary"
           disabled={!crmAvailable}
           aria-describedby={crmAvailable ? undefined : crmHintId}
-          onClick={() => openDealInCrm?.(deal.id)}
+          onClick={() => platform.openDealInCrm?.(deal.id)}
         >
           <ExternalLink className="size-4" aria-hidden="true" />
           Abrir no Bitrix24
         </Button>
         {crmAvailable ? null : (
           <span id={crmHintId} className="text-[11px] text-(--text-muted)">
-            Disponível quando o Workspace é aberto dentro do Bitrix24.
+            {crmHint}
           </span>
         )}
       </div>
 
-      <p className="mt-6 text-[11px] text-(--text-muted)">
-        Negócio fictício para homologação visual.
-      </p>
+      {deal.origin === "demo" ? (
+        <p className="mt-6 text-[11px] text-(--text-muted)">
+          Negócio fictício para homologação visual.
+        </p>
+      ) : null}
     </DialogContent>
   );
 }

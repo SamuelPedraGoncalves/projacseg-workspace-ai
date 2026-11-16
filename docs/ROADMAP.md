@@ -20,9 +20,10 @@ avatar, botão Abrir indo ao card do negócio, assistente abrindo o chat do Bitr
 
 ## ⏳ Sprint 3 — Integração Bitrix24 (portal de testes)
 
-- Instalar o aplicativo num **portal de testes** e homologar foto, card do negócio e chat.
-- Handler do aplicativo aceitando `POST` (servir o `index.html`).
-- Registrar o bot do assistente (`imbot.register`, código `projacseg_assistant`) na instalação.
+- ✅ Preparado: handler aceitando `POST`, página `/install` registrando o bot e endpoint de eventos
+  do bot (ver BITRIX24_SETUP.md).
+- Instalar o aplicativo num **portal de testes** e homologar foto, chat do assistente e instalação.
+- Hospedagem HTTPS estável para os testes (no lugar do túnel).
 - OAuth no backend; mapeamento domínio/`member_id` → `tenantId`.
 - Leitura de negócios, tarefas, departamentos e superiores.
 - Substituir `DemoJourneyRepository` pela API; persistir tema por `tenantId` + `bitrixUserId`.

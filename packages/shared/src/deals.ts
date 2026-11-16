@@ -10,6 +10,8 @@ export type DealPriority = z.infer<typeof dealPrioritySchema>;
 
 export const dealSchema = z.object({
   id: z.string().min(1),
+  /** `demo`: negócio fictício, não existe no Bitrix24. `crm`: lido do CRM do portal. */
+  origin: z.enum(["demo", "crm"]),
   clientName: z.string().min(1),
   /** Ramo do seguro (Automóvel, Empresarial, Residencial…). */
   branch: z.string().min(1),

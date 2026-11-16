@@ -21,6 +21,7 @@ const RESPONSIBLE = "Lucas";
 export const DEMO_DEALS: readonly Deal[] = [
   {
     id: "1001",
+    origin: "demo",
     clientName: "Carlos Almeida",
     branch: "Automóvel",
     insuranceType: "Renovação",
@@ -34,6 +35,7 @@ export const DEMO_DEALS: readonly Deal[] = [
   },
   {
     id: "1002",
+    origin: "demo",
     clientName: "Empresa Martins",
     branch: "Empresarial",
     insuranceType: "Novo",
@@ -47,6 +49,7 @@ export const DEMO_DEALS: readonly Deal[] = [
   },
   {
     id: "1003",
+    origin: "demo",
     clientName: "Roberto Lima",
     branch: "Automóvel",
     insuranceType: "Novo",
@@ -60,6 +63,7 @@ export const DEMO_DEALS: readonly Deal[] = [
   },
   {
     id: "1004",
+    origin: "demo",
     clientName: "Juliana Santos",
     branch: "Residencial",
     insuranceType: "Renovação",
@@ -73,6 +77,7 @@ export const DEMO_DEALS: readonly Deal[] = [
   },
   {
     id: "1005",
+    origin: "demo",
     clientName: "Clínica Oliveira",
     branch: "RC Profissional",
     insuranceType: "Novo",
@@ -86,6 +91,7 @@ export const DEMO_DEALS: readonly Deal[] = [
   },
   {
     id: "1006",
+    origin: "demo",
     clientName: "Ana Souza",
     branch: "Automóvel",
     insuranceType: "Novo",

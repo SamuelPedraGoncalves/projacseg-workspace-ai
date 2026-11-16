@@ -61,11 +61,56 @@ export class Bitrix24Host {
    * registrado no portal.
    */
   async openAssistantChat(botCode: string): Promise<boolean> {
-    const bots = await callBx24<Record<string, Bx24Bot> | Bx24Bot[]>(this.sdk, "imbot.bot.list");
-    const list = Array.isArray(bots) ? bots : Object.values(bots ?? {});
-    const bot = list.find((item) => item.CODE === botCode);
+    const bot = await this.findBot(botCode);
     if (!bot) return false;
     this.sdk.im.openMessenger(String(bot.ID));
     return true;
+  }
+
+  /**
+   * Registra (ou atualiza) o bot do assistente no portal. As mensagens enviadas a ele vão para
+   * `eventsUrl` no backend. Atualizar a cada instalação mantém a URL certa quando o endereço público
+   * muda (ex.: túnel de testes). Requer o escopo `imbot` e um administrador instalando.
+   */
+  async registerAssistantBot(botCode: string, eventsUrl: string): Promise<{ botId: string }> {
+    const handlers = {
+      EVENT_MESSAGE_ADD: eventsUrl,
+      EVENT_WELCOME_MESSAGE: eventsUrl,
+      EVENT_BOT_DELETE: eventsUrl,
+    };
+    const properties = {
+      NAME: "Assistente ProjacSeg",
+      WORK_POSITION: "Assistente operacional (em testes)",
+      COLOR: "AZURE",
+    };
+
+    const existing = await this.findBot(botCode);
+    if (existing) {
+      await callBx24(this.sdk, "imbot.update", {
+        BOT_ID: existing.ID,
+        FIELDS: { ...handlers, PROPERTIES: properties },
+      });
+      return { botId: String(existing.ID) };
+    }
+
+    const botId = await callBx24<number | string>(this.sdk, "imbot.register", {
+      CODE: botCode,
+      TYPE: "B",
+      OPENLINE: "N",
+      ...handlers,
+      PROPERTIES: properties,
+    });
+    return { botId: String(botId) };
+  }
+
+  /** Conclui a instalação; o Bitrix24 passa a abrir o aplicativo pelo handler. */
+  finishInstall(): void {
+    this.sdk.installFinish();
+  }
+
+  private async findBot(botCode: string): Promise<Bx24Bot | undefined> {
+    const bots = await callBx24<Record<string, Bx24Bot> | Bx24Bot[]>(this.sdk, "imbot.bot.list");
+    const list = Array.isArray(bots) ? bots : Object.values(bots ?? {});
+    return list.find((item) => item.CODE === botCode);
   }
 }

@@ -2,6 +2,23 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
+## [0.3.0] — 16/11/2026 — Preparação para portal de testes
+
+### Adicionado
+
+- API serve o build do frontend e aceita o `POST` do Bitrix24 no handler e na instalação
+  (`pnpm portal`).
+- Página `/install`: registra ou atualiza o bot do assistente e conclui a instalação.
+- `POST /bitrix24/events/assistant`: boas-vindas e resposta honesta do bot (IA ainda não conectada),
+  com validação de domínio, endpoint e `application_token`.
+- `origin` nos negócios (`demo` | `crm`): negócios fictícios nunca abrem card no portal.
+- Guia [BITRIX24_SETUP.md](BITRIX24_SETUP.md).
+- Testes: API 17, web 52.
+
+### Corrigido
+
+- Formulários do Bitrix24 com IDs numéricos pequenos (`data[BOT][9]`) viravam arrays no parser.
+
 ## [0.2.0] — 16/11/2026 — Integração com o Bitrix24 pelo navegador
 
 ### Adicionado

@@ -28,6 +28,8 @@ export interface Bx24Sdk {
   /** Abre um caminho do portal no slider do Bitrix24 (ex.: card do negócio). */
   openPath(path: string, callback?: (result: unknown) => void): void;
   getDomain(): string;
+  /** Conclui a instalação do aplicativo (chamado na página de instalação). */
+  installFinish(): void;
   im: {
     /** Abre o messenger do Bitrix24 no diálogo informado (ID do usuário/bot ou "chatXX"). */
     openMessenger(dialogId?: string): void;

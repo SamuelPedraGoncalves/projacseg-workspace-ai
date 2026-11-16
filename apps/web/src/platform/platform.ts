@@ -24,6 +24,14 @@ export interface Platform {
   /** Abre o card do negócio no CRM. `null` quando não há CRM conectado. */
   openDealInCrm: ((dealId: string) => void) | null;
   openAssistant(): Promise<AssistantOpenResult>;
+  /** Instalação do aplicativo no portal. `null` fora do Bitrix24. */
+  installer: AppInstaller | null;
+}
+
+export interface AppInstaller {
+  /** Registra/atualiza o bot do assistente apontando para `eventsUrl`. */
+  registerAssistant(eventsUrl: string): Promise<void>;
+  finish(): void;
 }
 
 /** Código do bot do assistente (identificador da própria aplicação, não um ID do Bitrix24). */
@@ -36,6 +44,7 @@ export function createDemoPlatform(user: UserContext = getDemoUser()): Platform 
     user,
     openDealInCrm: null,
     openAssistant: async () => "demo",
+    installer: null,
   };
 }
 
@@ -51,6 +60,12 @@ export function createBitrix24Platform(host: Bitrix24Host, user: UserContext): P
         console.warn("Não foi possível abrir o chat do assistente no Bitrix24.", error);
         return "not-installed";
       }
+    },
+    installer: {
+      registerAssistant: async (eventsUrl) => {
+        await host.registerAssistantBot(ASSISTANT_BOT_CODE, eventsUrl);
+      },
+      finish: () => host.finishInstall(),
     },
   };
 }

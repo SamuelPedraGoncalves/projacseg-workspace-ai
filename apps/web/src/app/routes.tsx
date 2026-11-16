@@ -1,4 +1,5 @@
 import { Navigate, type RouteObject } from "react-router";
+import { InstallPage } from "../features/install/InstallPage";
 import { JourneyPage } from "../features/journey/JourneyPage";
 import { VIEWS } from "../features/journey/views";
 import { AppShell } from "../layout/AppShell";
@@ -8,6 +9,8 @@ import { AppShell } from "../layout/AppShell";
  * é uma URL própria e reaproveita a mesma página com um filtro diferente.
  */
 export const routes: RouteObject[] = [
+  // Caminho de instalação configurado no aplicativo Bitrix24 (fora do layout do Workspace).
+  { path: "/install", element: <InstallPage /> },
   {
     element: <AppShell />,
     children: [

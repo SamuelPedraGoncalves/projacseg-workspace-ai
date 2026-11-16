@@ -10,6 +10,7 @@ function fakeSdk(responses: Record<string, unknown>, errors: Record<string, stri
       callback({ error: () => errors[method] ?? null, data: () => responses[method] as never }),
     openPath: vi.fn(),
     getDomain: () => "projacseg-teste.bitrix24.com.br",
+    installFinish: vi.fn(),
     im: { openMessenger: vi.fn() },
   };
   return sdk;
@@ -105,5 +106,53 @@ describe("detecção do Bitrix24", () => {
     expect(isInsideBitrix24(framed("?DOMAIN=x.bitrix24.com&APP_SID=abc"))).toBe(true);
     expect(isInsideBitrix24(framed("?DOMAIN=x.bitrix24.com"))).toBe(false);
     expect(isInsideBitrix24(framed(""))).toBe(false);
+  });
+});
+
+describe("registro do bot do assistente", () => {
+  it("registra o bot quando ainda não existe", async () => {
+    const calls: [string, Record<string, unknown>][] = [];
+    const sdk = fakeSdk({ "imbot.bot.list": {}, "imbot.register": 77 });
+    const original = sdk.callMethod;
+    sdk.callMethod = (method, params, callback) => {
+      calls.push([method, params]);
+      original(method, params, callback);
+    };
+    const result = await new Bitrix24Host(sdk).registerAssistantBot(
+      "projacseg_assistant",
+      "https://app.exemplo/bitrix24/events/assistant",
+    );
+    expect(result).toEqual({ botId: "77" });
+    const register = calls.find(([method]) => method === "imbot.register")?.[1];
+    expect(register).toMatchObject({
+      CODE: "projacseg_assistant",
+      TYPE: "B",
+      EVENT_MESSAGE_ADD: "https://app.exemplo/bitrix24/events/assistant",
+      EVENT_WELCOME_MESSAGE: "https://app.exemplo/bitrix24/events/assistant",
+      EVENT_BOT_DELETE: "https://app.exemplo/bitrix24/events/assistant",
+    });
+  });
+
+  it("atualiza a URL de eventos quando o bot já existe", async () => {
+    const calls: string[] = [];
+    const sdk = fakeSdk({
+      "imbot.bot.list": { "92": { ID: 92, CODE: "projacseg_assistant" } },
+      "imbot.update": true,
+    });
+    const original = sdk.callMethod;
+    sdk.callMethod = (method, params, callback) => {
+      calls.push(method);
+      original(method, params, callback);
+    };
+    const result = await new Bitrix24Host(sdk).registerAssistantBot("projacseg_assistant", "u");
+    expect(result).toEqual({ botId: "92" });
+    expect(calls).toContain("imbot.update");
+    expect(calls).not.toContain("imbot.register");
+  });
+
+  it("conclui a instalação", () => {
+    const sdk = fakeSdk({});
+    new Bitrix24Host(sdk).finishInstall();
+    expect(sdk.installFinish).toHaveBeenCalled();
   });
 });

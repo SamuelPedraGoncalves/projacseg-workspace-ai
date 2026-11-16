@@ -28,19 +28,26 @@ Regras:
 - Provisório: `tenantId` = domínio do portal. O backend fará o mapeamento domínio/`member_id` → tenant.
 - Escopos necessários no aplicativo: `user` (ou `user_brief`), `crm`, `im`, `imbot`.
 
-**Pendente para funcionar num portal de testes** (ver ROADMAP):
+**Instalação num portal de testes:** roteiro completo em [BITRIX24_SETUP.md](BITRIX24_SETUP.md).
 
-1. **Registrar o bot do assistente** (`imbot.register`, código `projacseg_assistant`) — feito pelo
-   backend na instalação do aplicativo, com a URL de eventos de mensagem (`ONIMBOTMESSAGEADD`) que
-   levará as perguntas à IA. Até lá o botão mostra o aviso de "não instalado".
-2. **Handler que aceite POST**: o Bitrix24 abre o aplicativo com `POST` na URL do handler. Um servidor
-   estático puro pode recusar; o backend (ou a hospedagem) precisa responder ao `POST` com o
-   `index.html`.
-3. **Negócios reais**: a lista ainda é demonstrativa (IDs 1001–1006). Dentro de um portal, "Abrir"
-   leva ao caminho do ID demonstrativo, que não corresponde a um negócio real até a leitura do CRM
-   (`crm.deal.list`) substituir os dados fictícios.
+- **Bot do assistente**: registrado (ou atualizado) pela página `/install` durante a instalação do
+  aplicativo (`imbot.register` / `imbot.update`, código `projacseg_assistant`), com eventos em
+  `/bitrix24/events/assistant`. Enquanto a IA não está conectada, o backend responde com uma
+  mensagem fixa e honesta ("a IA ainda está em implantação").
+- **Handler com POST**: a API serve o build do frontend e responde ao `POST` do Bitrix24 no handler
+  e na instalação com o `index.html`; o iframe só é liberado para os domínios autorizados
+  (`Content-Security-Policy: frame-ancestors`).
+- **Negócios**: a lista ainda é fictícia (`origin: "demo"`). Negócios fictícios nunca abrem card no
+  portal; só negócios com `origin: "crm"` (lidos do CRM, próxima etapa) abrem o card do Bitrix24.
 
-### No backend — status: **interfaces definidas, sem implementação**
+### Endpoint de eventos do bot (backend) — status: **implementado**
+
+`POST /bitrix24/events/assistant` (`apps/api/src/modules/assistant-bot/`): trata `ONIMBOTJOINCHAT`
+(boas-vindas), `ONIMBOTMESSAGEADD` (resposta) e `ONIMBOTDELETE`, respondendo com `imbot.message.add`
+no próprio portal. Proteções: lista de domínios autorizados, `client_endpoint` obrigatoriamente
+`https://<domínio>/rest/` e `application_token` conferido.
+
+### Demais portas do backend — status: **interfaces definidas, sem implementação**
 
 Contratos em `apps/api/src/integrations/bitrix24/` (`types.ts` e `ports.ts`).
 
