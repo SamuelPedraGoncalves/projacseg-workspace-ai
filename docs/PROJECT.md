@@ -30,10 +30,12 @@ Somente o **frontend funcional do dashboard**, com dados fictícios.
 - Navegação por URL: `/` (Minha Jornada / Para hoje), `/negocios`, `/em-risco`, `/aguardando`,
   `/resolvidos`. Menu lateral, filtros e cards de indicadores apontam para a mesma rota.
 - Filtros funcionando sobre seis negócios demonstrativos.
-- Diálogo de detalhes do negócio (botão **Abrir**), com botão "Abrir no Bitrix24" desabilitado até a
-  integração.
-- Chat demonstrativo (**Conversar com assistente** e item **Assistente IA**), com respostas
-  predefinidas sempre rotuladas como demonstrativas.
+- Integração com o Bitrix24 pelo navegador (BX24 JS SDK), ativa só quando o Workspace é aberto
+  dentro de um portal: avatar com a **foto do perfil do Bitrix24**, botão **Abrir** levando ao **card
+  do negócio no Bitrix24** e assistente abrindo o **chat do Bitrix24** (bot do assistente). Ainda não
+  homologada em portal de testes — ver INTEGRATIONS.md.
+- Fora do Bitrix24 (modo demonstrativo): diálogo de detalhes do negócio e chat com respostas
+  predefinidas, sempre rotuladas como demonstrativas.
 - Motor de temas: 8 temas predefinidos, seletor de cor, campo HEX com validação, prévia da escala de
   cinco tons, aplicação imediata, persistência por colaborador (localStorage) e restauração do padrão.
 - Responsividade (desktop, notebook, tablet e celular, com menu recolhível abaixo de 650 px) e
@@ -44,8 +46,8 @@ Somente o **frontend funcional do dashboard**, com dados fictícios.
 
 ### Não implementado (por decisão de escopo)
 
-- Agente de IA real, motor operacional de regras, escalonamento, banco de dados, autenticação OAuth e
-  qualquer chamada ao Bitrix24.
+- Agente de IA real, registro do bot do assistente, leitura dos negócios reais do CRM, motor
+  operacional de regras, escalonamento, banco de dados e autenticação OAuth no backend.
 - Uso do dashboard como página inicial automática do Bitrix24 (homologação posterior).
 
 ## Dados demonstrativos

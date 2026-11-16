@@ -27,10 +27,12 @@ const PRIORITY_LABEL: Record<DealPriority, string> = {
 
 interface DealCardProps {
   deal: Deal;
+  /** No Bitrix24 o botão abre o card do CRM (slider) em vez do diálogo de detalhes. */
+  opensInCrm?: boolean;
   onOpen: (deal: Deal) => void;
 }
 
-export function DealCard({ deal, onOpen }: DealCardProps) {
+export function DealCard({ deal, opensInCrm = false, onOpen }: DealCardProps) {
   const category = [deal.branch, deal.insuranceType].filter(Boolean).join(" · ");
 
   return (
@@ -66,8 +68,8 @@ export function DealCard({ deal, onOpen }: DealCardProps) {
 
       <button
         type="button"
-        aria-haspopup="dialog"
-        aria-label={`Abrir negócio de ${deal.clientName}`}
+        aria-haspopup={opensInCrm ? undefined : "dialog"}
+        aria-label={`Abrir negócio de ${deal.clientName}${opensInCrm ? " no Bitrix24" : ""}`}
         onClick={() => onOpen(deal)}
         className="flex cursor-pointer items-center gap-2 rounded-[11px] bg-white/80 px-[23px] py-[17px] text-lg whitespace-nowrap text-(--text-secondary) transition-[filter] duration-200 hover:brightness-[0.96] max-[900px]:p-3 max-[900px]:text-sm"
       >

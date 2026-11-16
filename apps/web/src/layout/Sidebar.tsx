@@ -15,6 +15,7 @@ import { useId, useState, type ComponentProps } from "react";
 import { NavLink } from "react-router";
 import { useUiStore } from "../app/ui-store";
 import { VIEWS } from "../features/journey/views";
+import { useWorkspaceActions } from "../platform/use-workspace-actions";
 
 const NAV_ITEMS: { path: string; label: string; icon: LucideIcon }[] = [
   { path: VIEWS.today.path, label: VIEWS.today.pageTitle, icon: CircleChevronRight },
@@ -46,7 +47,7 @@ function SidebarButton({
 export function Sidebar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuId = useId();
-  const setAssistantOpen = useUiStore((state) => state.setAssistantOpen);
+  const { openAssistant } = useWorkspaceActions();
   const setThemeOpen = useUiStore((state) => state.setThemeOpen);
   const closeMenu = () => setMenuOpen(false);
 
@@ -106,10 +107,9 @@ export function Sidebar() {
             <li>
               <SidebarButton
                 icon={Sparkles}
-                aria-haspopup="dialog"
                 onClick={() => {
                   closeMenu();
-                  setAssistantOpen(true);
+                  void openAssistant();
                 }}
               >
                 Assistente IA

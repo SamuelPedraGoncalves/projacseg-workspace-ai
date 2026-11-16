@@ -1,18 +1,18 @@
 import type { UserContext } from "@projacseg/shared";
 
 /**
- * Sessão do colaborador.
+ * Usuário do modo demonstrativo (fora do Bitrix24). Identificadores vindos de variáveis de ambiente
+ * com valores padrão fictícios — nada de IDs reais no código.
  *
- * Nesta sprint é um usuário demonstrativo (sem Bitrix24). Os identificadores vêm de variáveis de
- * ambiente com valores padrão fictícios — nada de IDs reais no código. Na integração, a sessão será
- * resolvida pelo backend a partir do OAuth do Bitrix24 e validada com `userContextSchema`
- * (ver docs/INTEGRATIONS.md). O schema Zod não é importado aqui para não pesar o bundle.
+ * Dentro do Bitrix24 o usuário (nome, ID e foto) vem de `user.current` — ver `platform/platform.ts`.
  */
-export function getCurrentUser(): UserContext {
+export function getDemoUser(): UserContext {
+  const photo = import.meta.env.VITE_DEMO_USER_PHOTO_URL;
   return {
     tenantId: import.meta.env.VITE_DEMO_TENANT_ID || "projacseg-demo",
     bitrixUserId: import.meta.env.VITE_DEMO_USER_ID || "demo-lucas",
     name: import.meta.env.VITE_DEMO_USER_NAME || "Lucas",
     initials: import.meta.env.VITE_DEMO_USER_INITIALS || "LC",
+    ...(photo ? { avatarUrl: photo } : {}),
   };
 }

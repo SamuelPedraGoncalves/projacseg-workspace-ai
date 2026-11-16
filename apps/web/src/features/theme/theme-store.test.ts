@@ -3,11 +3,13 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { createThemeStore } from "./theme-store";
 
 const scope: ThemeScope = { tenantId: "projacseg-demo", bitrixUserId: "demo-lucas" };
+const other: ThemeScope = { tenantId: "projacseg-demo", bitrixUserId: "demo-marina" };
 
-function setup() {
+function setup(user: ThemeScope | null = scope) {
   const element = document.createElement("div");
   const repository = new LocalStorageThemeRepository(window.localStorage);
-  const store = createThemeStore({ repository, scope, target: () => element });
+  const store = createThemeStore({ repository, target: () => element });
+  if (user) store.getState().initialize(user);
   return { element, repository, store };
 }
 
@@ -34,6 +36,18 @@ describe("theme store", () => {
     const reloaded = setup();
     expect(reloaded.store.getState().baseColor).toBe("#b52b77");
     expect(cssVar(reloaded.element, "--theme-base")).toBe("#b52b77");
+  });
+
+  it("cada colaborador carrega a própria preferência", () => {
+    setup(scope).store.getState().setTheme("#137849");
+    const marina = setup(other);
+    expect(marina.store.getState().baseColor).toBe(DEFAULT_THEME_BASE);
+  });
+
+  it("sem sessão identificada aplica o tema mas não persiste", () => {
+    const { repository, store } = setup(null);
+    store.getState().setTheme("#137849");
+    expect(repository.load(scope)).toBeNull();
   });
 
   it("rejeita cor inválida sem alterar o tema", () => {

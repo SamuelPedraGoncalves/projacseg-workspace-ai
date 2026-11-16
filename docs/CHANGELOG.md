@@ -2,6 +2,28 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
+## [0.2.0] — 16/11/2026 — Integração com o Bitrix24 pelo navegador
+
+### Adicionado
+
+- Detecção do ambiente (dentro de um portal Bitrix24 ou demonstração) e carregamento da BX24 JS SDK
+  apenas dentro do portal.
+- Avatar com a foto do perfil do Bitrix24 (`user.current`), com volta às iniciais se não houver foto
+  ou se a imagem falhar.
+- Botão **Abrir** abre o card do negócio no Bitrix24 (`BX24.openPath`).
+- **Conversar com assistente** e **Assistente IA** abrem o chat do bot do assistente no messenger do
+  Bitrix24; aviso quando o bot não está instalado no portal.
+- Testes do adaptador BX24 e do comportamento no modo Bitrix24 (web: 45 testes).
+
+### Alterado
+
+- Store do tema com `initialize(scope)`; `getCurrentUser` virou `getDemoUser`.
+- `.gitattributes` fixando fim de linha LF.
+
+### Removido
+
+- `integrations/crm-navigator.ts`, substituído pela camada `platform/`.
+
 ## [0.1.0] — 16/11/2026 — Sprint 1: Minha Jornada
 
 ### Adicionado

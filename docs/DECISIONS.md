@@ -71,3 +71,23 @@ Erro do campo HEX exibido como texto com `role="alert"` e `aria-invalid`, no lug
 
 A preferência de tema no backend só será exposta junto com a autenticação, para que a identidade venha
 da sessão e um colaborador não consiga alterar o tema de outro.
+
+## D-015 — Integração com o Bitrix24 pelo navegador via BX24 JS SDK
+
+Pedido do Samuel (16/11/2026): avatar com a foto do Bitrix24, **Abrir** indo ao card do negócio e o
+assistente usando o chat do Bitrix24. Feito com a SDK oficial dentro do iframe do aplicativo:
+`user.current` (foto), `BX24.openPath` (card no slider) e `BX24.im.openMessenger` (chat). A SDK só é
+carregada dentro de um portal (iframe + `DOMAIN` e `APP_SID` na URL); fora dele a aplicação continua no
+modo demonstrativo, o que mantém desenvolvimento e testes sem chamadas externas.
+
+## D-016 — Assistente como bot do Bitrix24, localizado pelo código
+
+O chat do assistente é um bot `imbot` do portal. O frontend o encontra por `imbot.bot.list` e pelo
+código `projacseg_assistant` (configurável), nunca por ID fixo — o ID muda a cada portal. Se o bot não
+existir, mostra um aviso em vez do chat demonstrativo, para não exibir respostas simuladas dentro de
+um portal real.
+
+## D-017 — Tema inicializado depois de identificar o colaborador
+
+O store do tema passou a ter `initialize(scope)`. Dentro do Bitrix24 o colaborador só é conhecido após
+`user.current`; o tema dele é aplicado antes da primeira renderização.

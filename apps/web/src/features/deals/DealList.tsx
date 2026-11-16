@@ -1,6 +1,7 @@
 import type { JourneyView } from "@projacseg/shared";
 import { filterDealsByView } from "@projacseg/shared/journey";
-import { useUiStore } from "../../app/ui-store";
+import { usePlatform } from "../../platform/platform-context";
+import { useWorkspaceActions } from "../../platform/use-workspace-actions";
 import { DealCard } from "./DealCard";
 import { useDeals } from "./queries";
 
@@ -8,7 +9,8 @@ const emptyClass = "rounded-(--radius-large) bg-[#f5f5f5] p-10 text-center text-
 
 export function DealList({ view }: { view: JourneyView }) {
   const { data: deals, isPending, isError } = useDeals();
-  const openDeal = useUiStore((state) => state.openDeal);
+  const { openDeal } = useWorkspaceActions();
+  const opensInCrm = usePlatform().openDealInCrm !== null;
 
   if (isPending) {
     return <p className={emptyClass}>Carregando negócios…</p>;
@@ -36,7 +38,11 @@ export function DealList({ view }: { view: JourneyView }) {
         <ul aria-label="Negócios" className="flex flex-col gap-3.5">
           {filtered.map((deal) => (
             <li key={deal.id}>
-              <DealCard deal={deal} onOpen={(selected) => openDeal(selected.id)} />
+              <DealCard
+                deal={deal}
+                opensInCrm={opensInCrm}
+                onOpen={(selected) => openDeal(selected.id)}
+              />
             </li>
           ))}
         </ul>

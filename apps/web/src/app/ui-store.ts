@@ -1,12 +1,17 @@
 import { create } from "zustand";
 
-/** Estado de interface que atravessa componentes: diálogos abertos e menu móvel. */
+/** O que o diálogo do assistente mostra quando o chat do Bitrix24 não pôde ser aberto. */
+export type AssistantFallback = "demo" | "not-installed";
+
+/** Estado de interface que atravessa componentes: diálogos abertos. */
 interface UiState {
   themeOpen: boolean;
   assistantOpen: boolean;
+  assistantFallback: AssistantFallback;
   selectedDealId: string | null;
   setThemeOpen: (open: boolean) => void;
   setAssistantOpen: (open: boolean) => void;
+  showAssistantFallback: (fallback: AssistantFallback) => void;
   openDeal: (dealId: string) => void;
   closeDeal: () => void;
 }
@@ -14,9 +19,11 @@ interface UiState {
 export const useUiStore = create<UiState>()((set) => ({
   themeOpen: false,
   assistantOpen: false,
+  assistantFallback: "demo",
   selectedDealId: null,
   setThemeOpen: (themeOpen) => set({ themeOpen }),
   setAssistantOpen: (assistantOpen) => set({ assistantOpen }),
+  showAssistantFallback: (assistantFallback) => set({ assistantFallback, assistantOpen: true }),
   openDeal: (selectedDealId) => set({ selectedDealId }),
   closeDeal: () => set({ selectedDealId: null }),
 }));

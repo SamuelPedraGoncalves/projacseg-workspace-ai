@@ -1,6 +1,6 @@
 import type { UserContext } from "@projacseg/shared";
-import { cn } from "@projacseg/ui";
 import { getGreeting } from "./greeting";
+import { UserAvatar } from "./UserAvatar";
 
 interface PageHeaderProps {
   pageTitle: string;
@@ -24,28 +24,5 @@ export function PageHeader({ pageTitle, user, now = new Date() }: PageHeaderProp
       </div>
       <UserAvatar user={user} />
     </header>
-  );
-}
-
-function UserAvatar({ user }: { user: UserContext }) {
-  return (
-    <div
-      className={cn(
-        "size-[110px] shrink-0 rounded-full bg-(image:--theme-gradient) p-1.5",
-        "max-[900px]:size-[75px] max-[650px]:size-[58px] max-[650px]:p-1",
-      )}
-    >
-      <div
-        role="img"
-        aria-label={`Avatar de ${user.name}`}
-        className="grid size-full place-items-center overflow-hidden rounded-full bg-white text-[32px] font-bold text-(--theme-base) max-[650px]:text-xl"
-      >
-        {user.avatarUrl ? (
-          <img src={user.avatarUrl} alt="" className="size-full object-cover" />
-        ) : (
-          <span aria-hidden="true">{user.initials}</span>
-        )}
-      </div>
-    </div>
   );
 }

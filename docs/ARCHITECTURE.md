@@ -31,16 +31,26 @@ apps/api ──► packages/shared
 ```
 src/
   app/            providers, rotas, query client, store de UI
-  config/         sessão do colaborador (demo, via variáveis VITE_)
-  layout/         AppShell, Sidebar, PageHeader, saudação
+  config/         usuário do modo demonstrativo (variáveis VITE_)
+  layout/         AppShell, Sidebar, PageHeader, UserAvatar, saudação
   features/
     journey/      página Minha Jornada, banner, indicadores, configuração das visões
     deals/        dados demo, repositório, queries, cards, filtros, diálogo de detalhes
-    assistant/    chat demonstrativo e respostas predefinidas
+    assistant/    diálogo do assistente fora do Bitrix24 (chat demonstrativo / aviso)
     theme/        store do tema e diálogo "Personalizar tema"
-  integrations/   portas do lado do navegador (abrir negócio no CRM)
+  integrations/
+    bitrix24/     carregamento da BX24 JS SDK e operações no portal (usuário, card, chat)
+  platform/       ambiente atual (bitrix24 | demo), contexto React e ações que dependem dele
   test/           setup e utilitário de renderização
 ```
+
+### Ambiente (Bitrix24 ou demonstração)
+
+`main.tsx` chama `bootstrapPlatform()` antes de renderizar. Dentro de um portal Bitrix24 (iframe com
+`DOMAIN` e `APP_SID` na URL) a BX24 JS SDK é carregada e o usuário vem de `user.current` (nome, ID e
+foto). Fora dele, `createDemoPlatform()`. O resultado (`Platform`) vai para o `PlatformContext`, e
+`useWorkspaceActions()` decide o que **Abrir** e **Assistente** fazem em cada ambiente. Detalhes em
+[INTEGRATIONS.md](INTEGRATIONS.md).
 
 ### Fluxo de dados
 
@@ -54,8 +64,9 @@ src/
 ### Tema
 
 `packages/theme` é puro: gera paleta e tokens. No web, `createThemeStore` liga o motor ao DOM
-(`document.documentElement`) e a um `ThemePreferenceRepository`. O store é criado na importação em
-`main.tsx`, antes da primeira renderização, evitando "piscar" o tema padrão. Detalhes em
+(`document.documentElement`) e a um `ThemePreferenceRepository`. Depois de identificar o colaborador,
+`main.tsx` chama `initialize({ tenantId, bitrixUserId })` antes da primeira renderização, evitando
+"piscar" o tema padrão. Detalhes em
 [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md).
 
 ## Backend (`apps/api`) — esqueleto

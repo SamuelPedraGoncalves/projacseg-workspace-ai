@@ -11,18 +11,25 @@ import { RouterProvider, createBrowserRouter } from "react-router";
 import { AppProviders } from "./app/providers";
 import { createQueryClient } from "./app/query-client";
 import { routes } from "./app/routes";
-// Importar o store aplica o tema salvo do colaborador antes da primeira renderização.
-import "./features/theme/theme-store";
+import { useThemeStore } from "./features/theme/theme-store";
+import { bootstrapPlatform } from "./platform/platform";
 
 const container = document.getElementById("root");
 if (!container) throw new Error("Elemento #root não encontrado.");
 
-const router = createBrowserRouter(routes);
+// Identifica o ambiente (Bitrix24 ou demonstração) e o colaborador antes de renderizar, para
+// aplicar o tema dele sem "piscar" o tema padrão.
+void bootstrapPlatform().then((platform) => {
+  useThemeStore.getState().initialize({
+    tenantId: platform.user.tenantId,
+    bitrixUserId: platform.user.bitrixUserId,
+  });
 
-createRoot(container).render(
-  <StrictMode>
-    <AppProviders client={createQueryClient()}>
-      <RouterProvider router={router} />
-    </AppProviders>
-  </StrictMode>,
-);
+  createRoot(container).render(
+    <StrictMode>
+      <AppProviders client={createQueryClient()} platform={platform}>
+        <RouterProvider router={createBrowserRouter(routes)} />
+      </AppProviders>
+    </StrictMode>,
+  );
+});

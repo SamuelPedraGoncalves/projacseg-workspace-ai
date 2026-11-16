@@ -1,16 +1,23 @@
 import { Dialog } from "@projacseg/ui";
 import { Outlet } from "react-router";
 import { useUiStore } from "../app/ui-store";
-import { getCurrentUser } from "../config/session";
+import { usePlatform } from "../platform/platform-context";
 import { AssistantDialogContent } from "../features/assistant/AssistantDialog";
 import { DealDetailsDialogContent } from "../features/deals/DealDetailsDialog";
 import { ThemeDialogContent } from "../features/theme/ThemeDialog";
 import { Sidebar } from "./Sidebar";
 
 export function AppShell() {
-  const user = getCurrentUser();
-  const { themeOpen, assistantOpen, selectedDealId, setThemeOpen, setAssistantOpen, closeDeal } =
-    useUiStore();
+  const { user } = usePlatform();
+  const {
+    themeOpen,
+    assistantOpen,
+    assistantFallback,
+    selectedDealId,
+    setThemeOpen,
+    setAssistantOpen,
+    closeDeal,
+  } = useUiStore();
 
   return (
     <>
@@ -35,7 +42,7 @@ export function AppShell() {
         <ThemeDialogContent />
       </Dialog>
       <Dialog open={assistantOpen} onOpenChange={setAssistantOpen}>
-        <AssistantDialogContent userName={user.name} />
+        <AssistantDialogContent userName={user.name} fallback={assistantFallback} />
       </Dialog>
       <Dialog
         open={selectedDealId !== null}

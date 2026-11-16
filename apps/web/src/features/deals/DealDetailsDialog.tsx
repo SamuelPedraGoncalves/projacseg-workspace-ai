@@ -1,8 +1,8 @@
 import { Button, DialogContent } from "@projacseg/ui";
 import { ExternalLink } from "lucide-react";
 import { useId } from "react";
-import { crmNavigator } from "../../integrations/crm-navigator";
 import { useUiStore } from "../../app/ui-store";
+import { usePlatform } from "../../platform/platform-context";
 import { useDeals } from "./queries";
 
 /** Conteúdo do diálogo de detalhes do negócio selecionado. */
@@ -10,6 +10,7 @@ export function DealDetailsDialogContent() {
   const selectedDealId = useUiStore((state) => state.selectedDealId);
   const { data: deals } = useDeals();
   const crmHintId = useId();
+  const { openDealInCrm } = usePlatform();
   const deal = deals?.find((item) => item.id === selectedDealId);
 
   if (!deal) {
@@ -25,7 +26,7 @@ export function DealDetailsDialogContent() {
     ["Próxima ação", deal.nextAction],
     ["Prazo", deal.deadlineLabel],
   ];
-  const crmAvailable = crmNavigator.isAvailable();
+  const crmAvailable = openDealInCrm !== null;
 
   return (
     <DialogContent title={deal.clientName} description={`Negócio #${deal.id}`}>
@@ -51,14 +52,14 @@ export function DealDetailsDialogContent() {
           variant="secondary"
           disabled={!crmAvailable}
           aria-describedby={crmAvailable ? undefined : crmHintId}
-          onClick={() => crmNavigator.openDeal(deal.id)}
+          onClick={() => openDealInCrm?.(deal.id)}
         >
           <ExternalLink className="size-4" aria-hidden="true" />
           Abrir no Bitrix24
         </Button>
         {crmAvailable ? null : (
           <span id={crmHintId} className="text-[11px] text-(--text-muted)">
-            Disponível após a homologação da integração.
+            Disponível quando o Workspace é aberto dentro do Bitrix24.
           </span>
         )}
       </div>

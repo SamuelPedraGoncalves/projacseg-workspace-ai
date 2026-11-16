@@ -1,7 +1,8 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useThemeStore } from "../features/theme/theme-store";
+import { createDemoPlatform, type AssistantOpenResult, type Platform } from "../platform/platform";
 import { renderApp } from "../test/render-app";
 import { useUiStore } from "./ui-store";
 
@@ -11,8 +12,93 @@ const dealNames = () =>
     .map((heading) => heading.textContent);
 
 beforeEach(() => {
-  useUiStore.setState({ themeOpen: false, assistantOpen: false, selectedDealId: null });
+  useUiStore.setState({
+    themeOpen: false,
+    assistantOpen: false,
+    assistantFallback: "demo",
+    selectedDealId: null,
+  });
+  useThemeStore.getState().initialize({ tenantId: "projacseg-demo", bitrixUserId: "demo-lucas" });
   useThemeStore.getState().resetTheme();
+});
+
+function bitrixPlatform(assistantResult: AssistantOpenResult = "opened") {
+  const platform: Platform = {
+    mode: "bitrix24",
+    user: {
+      tenantId: "projacseg-teste.bitrix24.com.br",
+      bitrixUserId: "57",
+      name: "Marina",
+      initials: "MC",
+      avatarUrl: "https://cdn.exemplo/marina.jpg",
+    },
+    openDealInCrm: vi.fn(),
+    openAssistant: vi.fn(async () => assistantResult),
+  };
+  return platform;
+}
+
+describe("Dentro do Bitrix24", () => {
+  it("mostra a foto do perfil do Bitrix24 no avatar", () => {
+    const { container } = renderApp("/", bitrixPlatform());
+    expect(screen.getByRole("img", { name: "Foto de Marina" })).toBeInTheDocument();
+    expect(container.querySelector("img")).toHaveAttribute("src", "https://cdn.exemplo/marina.jpg");
+    expect(screen.queryByText("MC")).not.toBeInTheDocument();
+  });
+
+  it("Abrir leva ao card do negócio no Bitrix24, sem diálogo", async () => {
+    const user = userEvent.setup();
+    const platform = bitrixPlatform();
+    renderApp("/", platform);
+    await user.click(
+      await screen.findByRole("button", { name: "Abrir negócio de Carlos Almeida no Bitrix24" }),
+    );
+    expect(platform.openDealInCrm).toHaveBeenCalledWith("1001");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("o assistente abre o chat do Bitrix24, sem o chat demonstrativo", async () => {
+    const user = userEvent.setup();
+    const platform = bitrixPlatform("opened");
+    renderApp("/", platform);
+    await user.click(screen.getByRole("button", { name: "Conversar com assistente" }));
+    await user.click(screen.getByRole("button", { name: "Assistente IA" }));
+    expect(platform.openAssistant).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("avisa quando o bot do assistente não está instalado no portal", async () => {
+    const user = userEvent.setup();
+    renderApp("/", bitrixPlatform("not-installed"));
+    await user.click(screen.getByRole("button", { name: "Conversar com assistente" }));
+    const dialog = await screen.findByRole("dialog", { name: "Assistente Projacseg" });
+    expect(within(dialog).getByText(/ainda não está instalado neste portal/)).toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Mensagem ao assistente")).not.toBeInTheDocument();
+  });
+});
+
+describe("Avatar", () => {
+  it("sem foto mostra as iniciais", () => {
+    renderApp("/");
+    expect(screen.getByRole("img", { name: "Foto de Lucas" })).toHaveTextContent("LC");
+  });
+
+  it("se a foto falhar ao carregar, volta para as iniciais", async () => {
+    const platform = createDemoPlatform({
+      tenantId: "t",
+      bitrixUserId: "1",
+      name: "Lucas",
+      initials: "LC",
+      avatarUrl: "https://cdn.exemplo/quebrada.jpg",
+    });
+    const { container } = renderApp("/", platform);
+    const img = container.querySelector("img");
+    expect(img).not.toBeNull();
+    img?.dispatchEvent(new Event("error"));
+    await waitFor(() =>
+      expect(screen.getByRole("img", { name: "Foto de Lucas" })).toHaveTextContent("LC"),
+    );
+  });
 });
 
 describe("Minha Jornada", () => {

@@ -1,10 +1,10 @@
 import { ArrowRight, Sparkles } from "lucide-react";
-import { useUiStore } from "../../app/ui-store";
+import { useWorkspaceActions } from "../../platform/use-workspace-actions";
 import { useBriefing } from "../deals/queries";
 
 export function AssistantBanner() {
   const { data: briefing } = useBriefing();
-  const setAssistantOpen = useUiStore((state) => state.setAssistantOpen);
+  const { openAssistant } = useWorkspaceActions();
 
   return (
     <section
@@ -24,8 +24,7 @@ export function AssistantBanner() {
       </p>
       <button
         type="button"
-        aria-haspopup="dialog"
-        onClick={() => setAssistantOpen(true)}
+        onClick={() => void openAssistant()}
         className="flex cursor-pointer items-center gap-3.5 self-start rounded-[13px] bg-white px-[23px] py-[17px] text-[clamp(14px,1.2vw,20px)] text-(--text-secondary) transition-[filter] duration-200 hover:brightness-[0.96] max-[650px]:p-[13px] max-[650px]:text-xs"
       >
         Conversar com assistente

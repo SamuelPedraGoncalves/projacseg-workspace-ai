@@ -8,7 +8,11 @@
   (`apps/web/.env.example`, `apps/api/.env.example`).
 - **Nenhum dado real de segurados** em código, testes, fixtures ou capturas de tela.
 - **Nenhuma alteração em automações do Bitrix24**, nenhum acesso ao portal de produção sem autorização.
-- **Nenhuma chamada externa desnecessária**: a fonte Poppins é servida localmente.
+- **Nenhuma chamada externa desnecessária**: a fonte Poppins é servida localmente; a BX24 JS SDK
+  (`api.bitrix24.com`) só é baixada quando a página está aberta dentro de um portal Bitrix24.
+- **BX24 JS SDK**: a aplicação nunca chama `BX24.getAuth()` nem lê, guarda ou envia o token do
+  iframe; chamadas usam `BX24.callMethod`, com as permissões do usuário logado.
+- **Caminhos do CRM**: `dealPath` só aceita IDs numéricos antes de chamar `BX24.openPath`.
 - **Nenhum deploy em produção sem autorização.**
 
 ## Isolamento entre colaboradores e empresas
@@ -36,4 +40,5 @@
 
 - Política de retenção e criptografia dos tokens OAuth.
 - Verificação de contraste WCAG por componente para temas personalizados.
-- Cabeçalhos de segurança (CSP, HSTS) no deploy.
+- Cabeçalhos de segurança no deploy: CSP liberando `api.bitrix24.com` (script), o domínio do portal
+  (imagens de perfil) e `frame-ancestors` restrito aos portais autorizados; HSTS.

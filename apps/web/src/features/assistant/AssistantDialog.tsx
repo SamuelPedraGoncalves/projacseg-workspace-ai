@@ -1,5 +1,6 @@
 import { Button, DialogContent, cn } from "@projacseg/ui";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import type { AssistantFallback } from "../../app/ui-store";
 import { getDemoReply, getDemoWelcome } from "./demo-responses";
 
 interface ChatMessage {
@@ -15,8 +16,32 @@ const message = (role: ChatMessage["role"], text: string): ChatMessage => ({
   text,
 });
 
+interface AssistantDialogContentProps {
+  userName: string;
+  /** `demo`: fora do Bitrix24. `not-installed`: no Bitrix24, mas sem o bot registrado no portal. */
+  fallback: AssistantFallback;
+}
+
+/**
+ * Exibido apenas quando o chat do Bitrix24 não pode ser aberto. Dentro do Bitrix24, com o bot
+ * registrado, o assistente abre direto no messenger do portal e este diálogo não aparece.
+ */
+export function AssistantDialogContent({ userName, fallback }: AssistantDialogContentProps) {
+  if (fallback === "not-installed") {
+    return (
+      <DialogContent title="Assistente Projacseg" description="Chat do Bitrix24 indisponível.">
+        <p className="rounded-xl bg-(--theme-surface) p-4 text-[13px] leading-[1.6]">
+          O assistente ainda não está instalado neste portal Bitrix24. Assim que o bot do assistente
+          for registrado, este botão abrirá a conversa diretamente no chat do Bitrix24.
+        </p>
+      </DialogContent>
+    );
+  }
+  return <DemoChat userName={userName} />;
+}
+
 /** Chat demonstrativo. Respostas predefinidas, sempre rotuladas como tal. */
-export function AssistantDialogContent({ userName }: { userName: string }) {
+function DemoChat({ userName }: { userName: string }) {
   const [messages, setMessages] = useState<ChatMessage[]>(() => [
     message("assistant", getDemoWelcome(userName)),
   ]);
@@ -92,7 +117,8 @@ export function AssistantDialogContent({ userName }: { userName: string }) {
       </form>
 
       <p id={noticeId} className="mt-3 text-[11px] text-(--text-muted)">
-        Respostas demonstrativas predefinidas. Nenhuma IA conectada nesta versão.
+        Respostas demonstrativas predefinidas. Nenhuma IA conectada nesta versão. Dentro do
+        Bitrix24, o assistente abre no chat do próprio Bitrix24.
       </p>
     </DialogContent>
   );
