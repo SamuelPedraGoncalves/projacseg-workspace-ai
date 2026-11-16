@@ -1,5 +1,10 @@
 import type { UserContext } from "@projacseg/shared";
 import { getDemoUser } from "../config/session";
+import {
+  ApiJourneyRepository,
+  DemoJourneyRepository,
+  type JourneyRepository,
+} from "../features/deals/deals-repository";
 import { Bitrix24Host } from "../integrations/bitrix24/host";
 import { loadBitrix24Sdk } from "../integrations/bitrix24/sdk";
 
@@ -26,6 +31,8 @@ export interface Platform {
   openAssistant(): Promise<AssistantOpenResult>;
   /** Instalação do aplicativo no portal. `null` fora do Bitrix24. */
   installer: AppInstaller | null;
+  /** De onde vêm negócios e indicadores: demonstração ou API (motor de regras + CRM). */
+  journey: JourneyRepository;
 }
 
 export interface AppInstaller {
@@ -45,10 +52,20 @@ export function createDemoPlatform(user: UserContext = getDemoUser()): Platform 
     openDealInCrm: null,
     openAssistant: async () => "demo",
     installer: null,
+    journey: new DemoJourneyRepository(),
   };
 }
 
-export function createBitrix24Platform(host: Bitrix24Host, user: UserContext): Platform {
+/** Sessão assinada que o backend injeta no HTML ao abrir o app pelo Bitrix24. */
+export function readWorkspaceSession(doc: Document = document): string | null {
+  return doc.querySelector<HTMLMetaElement>('meta[name="workspace-session"]')?.content || null;
+}
+
+export function createBitrix24Platform(
+  host: Bitrix24Host,
+  user: UserContext,
+  session: string | null,
+): Platform {
   return {
     mode: "bitrix24",
     user,
@@ -67,6 +84,8 @@ export function createBitrix24Platform(host: Bitrix24Host, user: UserContext): P
       },
       finish: () => host.finishInstall(),
     },
+    // Sem sessão (portal ainda não instalado no backend), mostra a demonstração.
+    journey: session ? new ApiJourneyRepository(session) : new DemoJourneyRepository(),
   };
 }
 
@@ -77,7 +96,7 @@ export async function bootstrapPlatform(): Promise<Platform> {
 
   const host = new Bitrix24Host(sdk);
   try {
-    return createBitrix24Platform(host, await host.getCurrentUser());
+    return createBitrix24Platform(host, await host.getCurrentUser(), readWorkspaceSession());
   } catch (error) {
     console.warn("Falha ao identificar o usuário no Bitrix24; usando modo demonstrativo.", error);
     return createDemoPlatform();

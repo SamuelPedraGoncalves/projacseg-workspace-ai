@@ -3,26 +3,38 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Backend do ProjacSeg Workspace AI (esqueleto: health check e portas de integração).",
+  "description": "Backend do ProjacSeg Workspace AI: motor de regras, integração Bitrix24, assistente e API do dashboard.",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "build": "tsc -p tsconfig.json && node scripts/build.mjs",
+    "dev": "prisma generate && tsx watch src/index.ts",
+    "build": "prisma generate && tsc -p tsconfig.json && node scripts/build.mjs",
     "start": "node dist/index.js",
-    "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run"
+    "typecheck": "prisma generate && tsc -p tsconfig.json",
+    "test": "prisma generate && vitest run",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:migrate:dev": "prisma migrate dev"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.9.0",
     "@fastify/formbody": "^9.0.2",
     "@fastify/static": "^10.1.11",
+    "@prisma/adapter-pg": "7.10.1",
+    "@prisma/client": "7.10.1",
+    "@projacseg/engine": "workspace:*",
     "@projacseg/shared": "workspace:*",
     "fastify": "^5.12.8",
+    "pg": "^8.23.1",
     "qs": "^6.17.1",
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.16",
+    "@electric-sql/pglite-socket": "0.2.19",
     "@types/node": "^26.6.6",
+    "@types/pg": "^8.23.1",
     "@types/qs": "^6.15.1",
     "esbuild": "^0.28.2",
+    "prisma": "7.10.1",
     "tsx": "^4.23.15",
     "typescript": "~6.0.3",
     "vitest": "^5.1.0"

@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { journeyRepository } from "../features/deals/deals-repository";
+import { DemoJourneyRepository, type JourneyRepository } from "../features/deals/deals-repository";
 import { DEMO_DEALS } from "../features/deals/demo-data";
 import { useThemeStore } from "../features/theme/theme-store";
 import { createDemoPlatform, type AssistantOpenResult, type Platform } from "../platform/platform";
@@ -26,7 +26,10 @@ beforeEach(() => {
 
 afterEach(() => vi.restoreAllMocks());
 
-function bitrixPlatform(assistantResult: AssistantOpenResult = "opened") {
+function bitrixPlatform(
+  assistantResult: AssistantOpenResult = "opened",
+  journey: JourneyRepository = new DemoJourneyRepository(),
+) {
   const platform: Platform = {
     mode: "bitrix24",
     user: {
@@ -39,6 +42,7 @@ function bitrixPlatform(assistantResult: AssistantOpenResult = "opened") {
     openDealInCrm: vi.fn(),
     openAssistant: vi.fn(async () => assistantResult),
     installer: { registerAssistant: vi.fn(async () => undefined), finish: vi.fn() },
+    journey,
   };
   return platform;
 }
@@ -52,12 +56,19 @@ describe("Dentro do Bitrix24", () => {
   });
 
   it("Abrir leva ao card do negócio do CRM no Bitrix24, sem diálogo", async () => {
-    vi.spyOn(journeyRepository, "listDeals").mockResolvedValue(
-      DEMO_DEALS.map((deal) => ({ ...deal, origin: "crm" as const })),
-    );
+    const crm: JourneyRepository = {
+      source: "crm",
+      getJourney: async () => ({
+        ...(await new DemoJourneyRepository().getJourney()),
+        deals: DEMO_DEALS.map((deal) => ({ ...deal, origin: "crm" as const })),
+      }),
+    };
     const user = userEvent.setup();
-    const platform = bitrixPlatform();
+    const platform = bitrixPlatform("opened", crm);
     renderApp("/", platform);
+    expect(
+      await screen.findByText(/Dados do Bitrix24\. Prazos, riscos e escalonamentos/),
+    ).toBeInTheDocument();
     await user.click(
       await screen.findByRole("button", { name: "Abrir negócio de Carlos Almeida no Bitrix24" }),
     );

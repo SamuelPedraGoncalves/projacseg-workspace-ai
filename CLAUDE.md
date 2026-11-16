@@ -35,8 +35,13 @@ Instruções para o Claude Code (e qualquer agente) neste repositório. Leia tam
 ```bash
 pnpm install        # dependências
 pnpm dev            # frontend em http://localhost:5173
-pnpm dev:api        # API esqueleto em http://127.0.0.1:3333/health
-pnpm test           # Vitest em todos os pacotes
+pnpm dev:api        # API (motor, Bitrix24, bot) em http://127.0.0.1:3333/health
+pnpm test           # Vitest em todos os pacotes (inclui PostgreSQL via PGlite)
 pnpm test:e2e       # Playwright (usa o Google Chrome instalado)
 pnpm build          # build de produção
+pnpm db:up          # PostgreSQL local (Docker) — depois: pnpm db:migrate
+pnpm portal         # build + API servindo o app para o Bitrix24
 ```
+
+Mudou o `schema.prisma`? Gere a migração com `pnpm --filter @projacseg/api db:migrate:dev`.
+Regras de negócio por empresa ficam em `apps/api/tenants/<domínio>.json` (ver o README da pasta).

@@ -11,49 +11,47 @@ O excesso de tarefas gera sobrecarga, dificulta a priorização e cria resistên
 
 ## Objetivo
 
-Transformar o Bitrix24 em uma plataforma de assistência operacional inteligente que:
+Transformar o Bitrix24 em uma plataforma de assistência operacional inteligente que organiza o
+trabalho de cada colaborador, monitora os processos, identifica atrasos, auxilia o colaborador e
+escalona automaticamente descumprimentos aos superiores.
 
-- organiza o trabalho de cada colaborador;
-- monitora os processos e identifica atrasos;
-- auxilia o colaborador (assistente de IA);
-- escalona automaticamente descumprimentos aos superiores.
+## Estado atual (16/11/2026)
 
-## Escopo da Sprint 1 — Minha Jornada
+### Implementado e testado (sem homologação em portal real)
 
-Somente o **frontend funcional do dashboard**, com dados fictícios.
+- **Dashboard Minha Jornada** fiel à referência, com temas por colaborador, filtros por URL,
+  responsividade e acessibilidade.
+- **Motor de regras determinístico** (`packages/engine`): prazos em dias/horas úteis com feriados,
+  risco, atraso, escalonamento em níveis, resolução só quando o negócio avança; projeção do dashboard e
+  resumo de prioridades — tudo sem IA.
+- **Backend** (`apps/api`): instalação do aplicativo com tokens criptografados, sessão assinada do
+  colaborador, leitura do CRM (negócios, pipelines, etapas, campos de lista, usuários, departamentos),
+  eventos de negócios em tempo real, sincronização completa periódica, histórico auditável (somente
+  inserção) e PostgreSQL via Prisma.
+- **Comunicação ativa pelo bot** no chat do Bitrix24: alerta de risco, aviso de atraso, aviso ao
+  superior no escalonamento e resumo diário, sem mensagens duplicadas.
+- **Assistente de IA** no chat (Claude, opcional e desligado por padrão): responde usando os dados do
+  motor; não altera prazos nem escalonamentos; por padrão não envia nomes de segurados à IA.
+- **Dashboard com dados reais** dentro do Bitrix24, atualizado a cada minuto; demonstração fora dele.
 
-### Implementado
+### Depende de terceiros para funcionar de verdade
 
-- Layout fiel ao HTML de referência (resolução de referência 1649 × 928): sidebar em degradê,
-  cabeçalho com breadcrumb, saudação por horário e avatar com contorno em degradê, banner do
-  assistente, quatro indicadores, filtros e cards de negócios.
-- Navegação por URL: `/` (Minha Jornada / Para hoje), `/negocios`, `/em-risco`, `/aguardando`,
-  `/resolvidos`. Menu lateral, filtros e cards de indicadores apontam para a mesma rota.
-- Filtros funcionando sobre seis negócios demonstrativos.
-- Integração com o Bitrix24 pelo navegador (BX24 JS SDK), ativa só quando o Workspace é aberto
-  dentro de um portal: avatar com a **foto do perfil do Bitrix24**, botão **Abrir** levando ao **card
-  do negócio no Bitrix24** e assistente abrindo o **chat do Bitrix24** (bot do assistente). Ainda não
-  homologada em portal de testes — ver INTEGRATIONS.md.
-- Fora do Bitrix24 (modo demonstrativo): diálogo de detalhes do negócio e chat com respostas
-  predefinidas, sempre rotuladas como demonstrativas.
-- Motor de temas: 8 temas predefinidos, seletor de cor, campo HEX com validação, prévia da escala de
-  cinco tons, aplicação imediata, persistência por colaborador (localStorage) e restauração do padrão.
-- Responsividade (desktop, notebook, tablet e celular, com menu recolhível abaixo de 650 px) e
-  acessibilidade (teclado, foco visível, link "Pular para o conteúdo", rótulos e anúncios para leitor
-  de tela).
-- API esqueleto (Fastify) com `/health`, configuração validada por Zod e **interfaces** (sem
-  implementação) da integração com o Bitrix24.
+- **Regras homologadas** da ProjacSeg (as 26 regras, calendário, campos do CRM). Hoje só há regras de
+  exemplo, marcadas como não homologadas.
+- **Portal de testes**, aplicativo local (client_id/secret) e servidor HTTPS com PostgreSQL.
+- **Decisão de LGPD e provedor/chave de IA** para ligar o chat inteligente.
 
-### Não implementado (por decisão de escopo)
+### Não implementado
 
-- Agente de IA real, registro do bot do assistente, leitura dos negócios reais do CRM, motor
-  operacional de regras, escalonamento, banco de dados e autenticação OAuth no backend.
+- Visão do gestor (equipe e escalonamentos recebidos) no dashboard.
+- Edição de regras pela interface (hoje: arquivo versionado por empresa).
+- Fila distribuída (BullMQ/Redis) — o agendador atual roda em um único processo.
 - Uso do dashboard como página inicial automática do Bitrix24 (homologação posterior).
 
 ## Dados demonstrativos
 
-Usuário **Lucas**; indicadores 42 / 12 / 3 / 8; negócios Carlos Almeida, Empresa Martins, Roberto Lima,
-Juliana Santos, Clínica Oliveira e Ana Souza. Todos fictícios (`apps/web/src/features/deals/demo-data.ts`).
+Fora do Bitrix24: usuário **Lucas**; indicadores 42 / 12 / 3 / 8; negócios Carlos Almeida, Empresa
+Martins, Roberto Lima, Juliana Santos, Clínica Oliveira e Ana Souza — todos fictícios.
 
 ## Partes envolvidas
 

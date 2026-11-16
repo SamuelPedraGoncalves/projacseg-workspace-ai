@@ -1,23 +1,24 @@
 import { useQuery } from "@tanstack/react-query";
-import { journeyRepository } from "./deals-repository";
+import { usePlatform } from "../../platform/platform-context";
+import { JourneyApiError, type JourneyData } from "./deals-repository";
 
-export const journeyKeys = {
-  deals: ["journey", "deals"] as const,
-  summary: ["journey", "summary"] as const,
-  briefing: ["journey", "briefing"] as const,
-};
+/** Com dados reais, o painel se atualiza sozinho (o motor reavalia prazos a cada minuto). */
+const REFRESH_MS = 60_000;
 
-export function useDeals() {
-  return useQuery({ queryKey: journeyKeys.deals, queryFn: () => journeyRepository.listDeals() });
-}
-
-export function useJourneySummary() {
-  return useQuery({ queryKey: journeyKeys.summary, queryFn: () => journeyRepository.getSummary() });
-}
-
-export function useBriefing() {
+function useJourneyQuery<T>(select: (data: JourneyData) => T) {
+  const { journey } = usePlatform();
   return useQuery({
-    queryKey: journeyKeys.briefing,
-    queryFn: () => journeyRepository.getBriefing(),
+    queryKey: ["journey", journey.source],
+    queryFn: () => journey.getJourney(),
+    select,
+    refetchInterval: journey.source === "crm" ? REFRESH_MS : false,
+    refetchOnWindowFocus: journey.source === "crm",
+    retry: (count, error) =>
+      !(error instanceof JourneyApiError && error.status === 401) && count < 2,
   });
 }
+
+export const useJourney = () => useJourneyQuery((data) => data);
+export const useDeals = () => useJourneyQuery((data) => data.deals);
+export const useJourneySummary = () => useJourneyQuery((data) => data.summary);
+export const useBriefing = () => useJourneyQuery((data) => data.briefing);

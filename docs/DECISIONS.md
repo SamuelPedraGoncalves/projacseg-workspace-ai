@@ -113,3 +113,49 @@ respostas simuladas no chat do Bitrix24.
 
 `demo` (fictício) ou `crm` (lido do portal). Só `crm` abre o card no Bitrix24, para nunca abrir um
 negócio inexistente (ou de outro cliente) a partir de um ID fictício.
+
+## D-022 — Motor de regras como pacote puro (`packages/engine`)
+
+Prazos, risco e escalonamento são funções puras com `now` como parâmetro: mesmas entradas, mesmo
+resultado, testáveis sem banco, rede ou IA. O backend só persiste os comandos que o motor devolve.
+
+## D-023 — Modelo "SLA de etapa"
+
+Cada regra abre uma ocorrência quando o negócio entra numa etapa e a encerra quando ele sai dela (ou é
+fechado). Corresponde às automações atuais que criam tarefas ao mudar de etapa. Prazos contam da
+entrada na etapa (`MOVED_TIME`), não do momento da sincronização.
+
+## D-024 — Fuso como deslocamento fixo
+
+O calendário usa `utcOffsetMinutes` (Brasília = -180) em vez de banco de fusos: o Brasil não tem
+horário de verão desde 2019 e o cálculo fica totalmente determinístico.
+
+## D-025 — Regras em arquivo versionado por empresa
+
+`apps/api/tenants/<domínio>.json` guarda calendário, campos e regras. Cada mudança é um commit
+revisável (trilha de auditoria das regras) e nada fica fixo no código. Edição pela interface fica para
+depois.
+
+## D-026 — Sessão do Workspace no HTML, não cookie
+
+Ao abrir o app, o backend valida o `AUTH_ID` no portal e injeta uma sessão HMAC na página. Evita
+cookies de terceiros (bloqueados em iframes) e mantém os tokens do Bitrix24 fora do navegador.
+
+## D-027 — Agendador em processo
+
+Um `setInterval` com proteção contra sobreposição atende um servidor. A interface isolada permite
+trocar por BullMQ/Redis quando houver várias instâncias.
+
+## D-028 — IA: Claude Opus 5.5, desligada por padrão e sem nomes de segurados
+
+Provedor desacoplado (`LlmProvider`); implementação com o SDK oficial da Anthropic, modelo
+`claude-opus-5-5`, esforço `medium` e fallback do servidor (`fallbacks: "default"`) para recusas. A
+IA só recebe a projeção do motor e não pode alterar prazos ou escalonamentos. Por padrão os títulos dos
+negócios viram "Negócio #ID" antes de sair do servidor e são recolocados na resposta. Ligar exige
+`AI_PROVIDER`, chave e `aiEnabled` na empresa — decisão de LGPD pendente.
+
+## D-029 — PGlite para testar o PostgreSQL
+
+Sem Docker disponível na máquina de desenvolvimento, o armazenamento Prisma é testado contra o PGlite
+(PostgreSQL em WebAssembly servido pelo protocolo de rede), aplicando a migração versionada. O teste
+encontrou um bug real que a versão em memória não acusava.

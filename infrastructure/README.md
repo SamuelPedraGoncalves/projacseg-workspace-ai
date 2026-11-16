@@ -1,14 +1,20 @@
 # Infraestrutura
 
-Nada desta pasta está em uso na Sprint 1. A primeira entrega roda só com `pnpm dev` (frontend Vite).
+## Em uso
 
-## Previsto (ver docs/ROADMAP.md)
+| Arquivo              | Uso                                                                    |
+| -------------------- | ---------------------------------------------------------------------- |
+| `docker-compose.yml` | PostgreSQL 17 + pgvector local: `pnpm db:up`, depois `pnpm db:migrate` |
 
-| Componente            | Uso                                                      | Quando                      |
-| --------------------- | -------------------------------------------------------- | --------------------------- |
-| PostgreSQL + pgvector | Dados de tenants, preferências, ocorrências e embeddings | Sprint do motor operacional |
-| Redis + BullMQ        | Filas do motor de regras e do escalonamento              | Sprint do motor operacional |
-| Docker Compose        | Ambiente local com Postgres e Redis                      | Junto com o banco           |
+As credenciais do Compose são só locais. Em servidor, use um banco gerenciado e segredos próprios.
+
+## Previsto
+
+| Componente       | Uso                                                    | Quando                          |
+| ---------------- | ------------------------------------------------------ | ------------------------------- |
+| Redis + BullMQ   | Agendamento distribuído (mais de uma instância da API) | Ao escalar horizontalmente      |
+| Hospedagem HTTPS | API + frontend acessíveis pelo Bitrix24                | Homologação no portal de testes |
+| Observabilidade  | Logs e alertas do motor                                | Antes da produção               |
 
 ## Regras
 

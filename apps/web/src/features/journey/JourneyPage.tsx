@@ -3,19 +3,36 @@ import { PageHeader } from "../../layout/PageHeader";
 import { usePlatform } from "../../platform/platform-context";
 import { DealFilters } from "../deals/DealFilters";
 import { DealList } from "../deals/DealList";
+import { useJourney } from "../deals/queries";
 import { AssistantBanner } from "./AssistantBanner";
 import { MetricsGrid } from "./MetricsGrid";
 import { VIEWS } from "./views";
 
-const NOTICE = {
-  demo: "Ambiente demonstrativo — Dados fictícios. Nenhuma conexão com o Bitrix24.",
-  bitrix24:
-    "Conectado ao Bitrix24. Negócios e indicadores ainda são demonstrativos — a leitura dos " +
-    "negócios do CRM entra na próxima etapa.",
-} as const;
+function formatTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+}
+
+function DataNotice() {
+  const { mode, journey } = usePlatform();
+  const { data } = useJourney();
+
+  let text: string;
+  if (journey.source === "crm") {
+    text =
+      "Dados do Bitrix24. Prazos, riscos e escalonamentos calculados pelo motor de regras" +
+      (data ? ` · atualizado às ${formatTime(data.generatedAt)}.` : ".");
+  } else if (mode === "bitrix24") {
+    text =
+      "Conectado ao Bitrix24, mas o portal ainda não foi instalado no servidor do Workspace — " +
+      "mostrando dados demonstrativos.";
+  } else {
+    text = "Ambiente demonstrativo — Dados fictícios. Nenhuma conexão com o Bitrix24.";
+  }
+  return <p className="mt-[25px] text-[11px] text-(--text-muted)">{text}</p>;
+}
 
 export function JourneyPage({ view }: { view: JourneyView }) {
-  const { user, mode } = usePlatform();
+  const { user } = usePlatform();
 
   return (
     <>
@@ -26,7 +43,7 @@ export function JourneyPage({ view }: { view: JourneyView }) {
         <DealFilters view={view} />
         <DealList view={view} />
       </section>
-      <p className="mt-[25px] text-[11px] text-(--text-muted)">{NOTICE[mode]}</p>
+      <DataNotice />
     </>
   );
 }

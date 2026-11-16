@@ -1,0 +1,23 @@
+# Ambiente local: PostgreSQL com pgvector.
+# Uso: pnpm db:up && pnpm db:migrate
+# Credenciais apenas locais (nunca reutilizar em servidor). Em produção, use um banco gerenciado.
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: projacseg-workspace-db
+    environment:
+      POSTGRES_USER: workspace
+      POSTGRES_PASSWORD: workspace_local
+      POSTGRES_DB: projacseg_workspace
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - workspace-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U workspace -d projacseg_workspace"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  workspace-db:

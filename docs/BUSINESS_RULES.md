@@ -38,6 +38,23 @@ Implementação única em `filterDealsByView` (`packages/shared/src/journey.ts`)
 Prioridade (barra lateral do card): crítica = vermelho, atenção = âmbar, sem urgência = cinza,
 concluído = verde. Cores fixas, independentes do tema.
 
+## Como o motor aplica as regras (implementado)
+
+1. Quando um negócio entra numa etapa com regra, abre-se uma **ocorrência** com prazo contado da
+   entrada na etapa: dias úteis (fim do expediente do N-ésimo dia útil), horas úteis ou tempo corrido.
+2. Ao atingir a fração `riskAtRatio` do prazo, a ocorrência fica **em risco** e o responsável é
+   alertado pelo bot.
+3. No vencimento fica **em atraso**; se a regra escalona, o **superior imediato** (chefe do
+   departamento no Bitrix24) é avisado; a cada intervalo, o nível acima.
+4. A ocorrência só é **resolvida** quando o negócio sai da etapa ou é fechado. Não há como cancelar ou
+   adiar o escalonamento.
+5. Regras de espera (`kind: "waiting"`, ex.: seguradora) aparecem em "Aguardando" e, em geral, não
+   escalonam.
+6. Cada passo é gravado no histórico (somente inserção) com autor `engine`.
+
+Indicadores reais: **Negócios ativos** (abertos do colaborador), **Ações de hoje** (ocorrências de ação
+que vencem hoje ou já venceram), **Em risco** (em risco + em atraso), **Resolvidas hoje**.
+
 ## Pendente de definição
 
 - Catálogo das 26 regras: gatilho, prazo (SLA), responsável, nível de escalonamento.

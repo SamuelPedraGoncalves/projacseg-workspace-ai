@@ -3,108 +3,130 @@
 Roteiro para instalar o Workspace como **aplicativo local** num portal Bitrix24 **de testes**.
 Não use o portal de produção da ProjacSeg sem autorização.
 
-## O que vai funcionar
+## O que funciona depois da instalação
 
-- Menu lateral do Bitrix24 abrindo o Workspace (dashboard Minha Jornada).
-- **Foto e nome do usuário logado** no cabeçalho.
-- **Conversar com assistente** / **Assistente IA** abrindo o chat do bot "Assistente ProjacSeg" no
-  messenger do Bitrix24. O bot responde com uma mensagem fixa avisando que a IA **ainda não está
-  conectada** — não há respostas simuladas.
-- **Abrir** em negócios: os negócios da lista ainda são **fictícios**, então abrem o diálogo de detalhes
-  (com o aviso "Negócio fictício: não existe no Bitrix24"). Quando a leitura do CRM entrar, negócios
-  reais abrirão o card do Bitrix24 — o mecanismo já está pronto e testado.
+- **Dashboard com os negócios reais** do colaborador logado, atualizado sozinho a cada minuto.
+- **Motor de regras** (sem IA): abre ocorrências quando um negócio entra numa etapa com regra, calcula
+  o prazo em dias/horas úteis, marca risco e atraso, e **escalona automaticamente** ao superior pelo
+  organograma do Bitrix24. A ocorrência só termina quando o negócio avança de etapa.
+- **Mensagens ativas pelo bot** "Assistente ProjacSeg": alerta de risco, aviso de atraso, aviso ao
+  superior no escalonamento e **resumo diário** no horário configurado.
+- **Abrir** em negócios reais abre o card no Bitrix24.
+- **Chat com IA** (opcional): o bot responde perguntas usando os dados do motor (Claude). Desligado
+  por padrão.
+- Foto e nome do usuário no cabeçalho.
+
+> O motor só age sobre **regras configuradas**. Sem as regras homologadas da ProjacSeg, use as regras
+> de exemplo apenas para testar (ver passo 3).
 
 ## Pré-requisitos
 
 - Portal Bitrix24 de testes e usuário **administrador**.
-- Node.js 22+ e pnpm 12 nesta máquina.
-- Um **endereço HTTPS público** apontando para esta máquina (o Bitrix24 na nuvem precisa alcançar o
-  servidor). Para testes, um túnel resolve:
-  - Cloudflare Tunnel: `cloudflared tunnel --url http://localhost:3333`
-  - ou ngrok: `ngrok http 3333`
+- Node.js 22+ e pnpm 12.
+- PostgreSQL: `pnpm db:up` (Docker) ou um banco gerenciado. Sem banco, a API roda em memória e perde
+  tudo ao reiniciar — serve só para um teste rápido.
+- Endereço **HTTPS público** para esta máquina (o Bitrix24 na nuvem precisa alcançá-la). Para testes:
+  `cloudflared tunnel --url http://localhost:3333` ou `ngrok http 3333`.
 
-  O túnel mostra uma URL como `https://algo.trycloudflare.com`. Túneis rápidos mudam de URL a cada
-  execução — veja "Quando a URL mudar".
+## 1. Criar o aplicativo local no Bitrix24
 
-## 1. Configurar e subir o servidor
+**Aplicativos → Recursos para desenvolvedores → Outros → Aplicativo local** (os nomes podem variar).
+
+| Campo                         | Valor                                                  |
+| ----------------------------- | ------------------------------------------------------ |
+| Tipo                          | Aplicativo com interface (não marcar "usa apenas API") |
+| Caminho do manipulador        | `https://<url-pública>/`                               |
+| Caminho de instalação inicial | `https://<url-pública>/install`                        |
+| Nome do item de menu          | `Minha Jornada`                                        |
+| Permissões                    | `crm`, `user`, `department`, `im`, `imbot`             |
+
+Salve e anote o **client_id** e o **client_secret** (vão só para o `.env` do servidor).
+
+## 2. Configurar o servidor
 
 ```bash
 cp apps/api/.env.example apps/api/.env
 ```
 
-Em `apps/api/.env`, informe o domínio do portal de testes:
+Preencha em `apps/api/.env`:
 
-```
-BITRIX24_ALLOWED_DOMAINS=seu-portal-de-testes.bitrix24.com.br
-```
+- `DATABASE_URL` (o padrão serve para `pnpm db:up`);
+- `TOKEN_ENCRYPTION_KEY` e `SESSION_SECRET` (comandos para gerar estão no arquivo);
+- `BITRIX24_ALLOWED_DOMAINS` = domínio do portal de testes;
+- `BITRIX24_CLIENT_ID` e `BITRIX24_CLIENT_SECRET` do passo 1.
 
-Depois:
+## 3. Configurar a empresa (regras)
+
+Crie `apps/api/tenants/<domínio-do-portal>.json` a partir de
+`apps/api/tenants/exemplo.bitrix24.com.br.json`: calendário, campos de ramo/tipo, horário do resumo
+diário e as regras. Na primeira instalação, o servidor grava `<domínio>.catalog.json` com os IDs de
+pipelines e etapas do portal — use-os nas regras e **reinstale** para aplicar.
+
+## 4. Subir
 
 ```bash
 pnpm install
-pnpm portal
+pnpm db:up        # se for usar o Postgres local via Docker
+pnpm db:migrate
+pnpm portal       # build + API em http://127.0.0.1:3333
 ```
 
-`pnpm portal` gera o build e sobe a API em `http://127.0.0.1:3333`, servindo o Workspace. Em outro
-terminal, inicie o túnel. Confira `https://<url-do-túnel>/health` — deve mostrar
-`"bitrix24": "configured"`.
+Em outro terminal, inicie o túnel. Confira `https://<url-pública>/health`: deve mostrar
+`"database": "postgresql"` e `"bitrix24": "configured"`.
 
-## 2. Criar o aplicativo local no Bitrix24
+## 5. Instalar
 
-No portal: **Aplicativos → Recursos para desenvolvedores → Outros → Aplicativo local**
-(os nomes podem variar um pouco conforme a versão e o idioma).
+Abra o aplicativo no portal (ou **Reinstalar**). A instalação:
 
-| Campo                            | Valor                                                                                          |
-| -------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Tipo                             | Aplicativo com interface (não marcar "usa apenas API")                                         |
-| Caminho do manipulador (handler) | `https://<url-do-túnel>/`                                                                      |
-| Caminho de instalação inicial    | `https://<url-do-túnel>/install`                                                               |
-| Nome do item de menu             | `Minha Jornada`                                                                                |
-| Permissões (escopos)             | **CRM** (`crm`), **Usuários** (`user`), **Chat e notificações** (`im`), **Chatbots** (`imbot`) |
+1. valida que quem instala é administrador e que o acesso é deste aplicativo;
+2. guarda os tokens do aplicativo **criptografados** no banco (o motor trabalha sem ninguém logado);
+3. liga os eventos de negócios (`ONCRMDEALADD`, `ONCRMDEALUPDATE`, `ONCRMDEALDELETE`);
+4. carrega as regras de `tenants/<domínio>.json` e grava o catálogo de pipelines;
+5. registra o bot "Assistente ProjacSeg" e conclui a instalação;
+6. dispara a primeira sincronização completa do CRM.
 
-Salve. O Bitrix24 mostra `client_id` e `client_secret`: **não** são necessários nesta etapa; se quiser
-guardá-los, use apenas o `apps/api/.env` (nunca o Git).
+## 6. Roteiro de teste
 
-## 3. Instalar
+1. Abra **Minha Jornada** no menu: sua foto, seu nome e **seus negócios reais** devem aparecer, com o
+   aviso "Dados do Bitrix24 … atualizado às HH:MM".
+2. Mova um negócio para uma etapa que tenha regra: em até alguns segundos ele aparece com prazo.
+3. Clique em **Abrir**: abre o card do negócio no Bitrix24.
+4. Para ver risco/atraso/escalonamento rapidamente, crie uma regra de teste com prazo curto
+   (ex.: `{ "amount": 5, "unit": "minutes" }`, `riskAtRatio: 0.5`) e reinstale.
+5. Confira as mensagens do bot no chat: alerta, atraso e o aviso ao superior (o chefe do departamento
+   do responsável no organograma do Bitrix24).
+6. Escreva ao bot: sem IA ligada, ele avisa que a IA não está ativada.
 
-Abra o aplicativo (ou use **Reinstalar**). A página de instalação:
+## 7. Ligar a IA no chat (opcional)
 
-1. registra o bot **Assistente ProjacSeg** (`imbot.register`, código `projacseg_assistant`) apontando
-   para `https://<url-do-túnel>/bitrix24/events/assistant`;
-2. conclui a instalação (`BX24.installFinish`).
-
-Se o registro do bot falhar (ex.: escopo `imbot` ausente), a página mostra o erro e o botão
-**Concluir sem o assistente**.
-
-## 4. Roteiro de teste
-
-1. Abra **Minha Jornada** no menu esquerdo do Bitrix24.
-2. Confira **sua foto** no círculo do canto superior direito e **seu nome** na saudação. Sem foto no
-   perfil, aparecem as iniciais.
-3. Clique em **Conversar com assistente**: deve abrir o chat do "Assistente ProjacSeg".
-4. Escreva qualquer mensagem: o bot responde que a IA ainda está em implantação.
-5. Clique em **Abrir** num negócio: abre o diálogo de detalhes com o aviso de negócio fictício.
-6. Troque o tema e recarregue: a preferência é só sua (outro usuário do portal mantém o tema dele).
+1. Decida sobre LGPD (ver docs/SECURITY.md): por padrão, os **títulos dos negócios não saem do
+   servidor** (`AI_REDACT_CLIENT_NAMES=true`).
+2. No `.env`: `AI_PROVIDER=anthropic` e `ANTHROPIC_API_KEY=...` (ou `ant auth login` no servidor).
+3. Em `tenants/<domínio>.json`: `"aiEnabled": true` e reinstale.
+4. Pergunte ao bot "o que faço primeiro hoje?". A resposta usa os dados do motor; a IA não altera
+   prazos nem escalonamentos.
 
 ## Quando a URL mudar
 
-Com túnel rápido, a URL muda a cada execução. Atualize os dois caminhos no aplicativo local e use
-**Reinstalar**: a instalação atualiza o endereço de eventos do bot (`imbot.update`).
+Com túnel rápido, a URL muda a cada execução: atualize os caminhos no aplicativo local e use
+**Reinstalar** (o bot e os eventos passam a apontar para a URL nova).
 
 ## Problemas comuns
 
-| Sintoma                                              | Causa provável                                                                                             |
-| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Tela em branco dentro do Bitrix24                    | `BITRIX24_ALLOWED_DOMAINS` sem o domínio do portal (o iframe é bloqueado) ou servidor/túnel parado         |
-| Aparece "Ambiente demonstrativo" dentro do portal    | A página não recebeu `DOMAIN`/`APP_SID` na URL ou a BX24 JS SDK não carregou — veja o console do navegador |
-| "O assistente ainda não está instalado neste portal" | Bot não registrado: confira o escopo `imbot` e reinstale                                                   |
-| Bot não responde                                     | Eventos recusados (domínio fora da lista) ou túnel parado; veja o log do `pnpm portal`                     |
+| Sintoma                                      | Causa provável                                                                                 |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Tela em branco no Bitrix24                   | Domínio fora de `BITRIX24_ALLOWED_DOMAINS` (iframe bloqueado) ou servidor/túnel parado         |
+| "Ambiente demonstrativo" dentro do portal    | A página não recebeu `DOMAIN`/`APP_SID` ou a BX24 JS SDK não carregou                          |
+| "Portal ainda não foi instalado no servidor" | Instalação não concluída no backend: veja o log de `pnpm portal` e reinstale                   |
+| Nenhum prazo aparece                         | Sem regras para a etapa: confira `tenants/<domínio>.json` e o catálogo                         |
+| Nenhum escalonamento                         | Responsável sem departamento/chefe no organograma (o log registra `escalation_target_missing`) |
+| Motor para depois de ~1 h                    | `BITRIX24_CLIENT_ID`/`SECRET` ausentes: o token não é renovado                                 |
 
 ## Segurança
 
-- O servidor só aceita eventos dos domínios em `BITRIX24_ALLOWED_DOMAINS` e só responde para
-  `https://<domínio>/rest/`.
-- O `application_token` do portal é memorizado no primeiro evento (fixe-o com
-  `BITRIX24_APPLICATION_TOKEN` se preferir); eventos com outro token são recusados.
-- Tokens recebidos nos eventos são usados só para a resposta e não são armazenados nem registrados.
-- O túnel expõe esta máquina na internet enquanto estiver aberto: encerre-o ao terminar os testes.
+- Eventos só dos domínios autorizados; respostas só para `https://<domínio>/rest/`; `application_token`
+  conferido.
+- O `AUTH_ID` que o Bitrix24 envia ao abrir o app é validado no portal e **não** chega ao navegador; o
+  navegador recebe uma sessão assinada do Workspace (8 h).
+- Tokens do aplicativo criptografados (AES-256-GCM) no banco.
+- O túnel expõe esta máquina na internet: encerre-o ao terminar os testes.

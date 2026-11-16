@@ -2,6 +2,29 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
+## [0.4.0] — 16/11/2026 — Motor operacional, comunicação ativa e IA
+
+### Adicionado
+
+- `packages/engine`: calendário útil, regras (SLA de etapa), avaliação determinística (risco, atraso,
+  escalonamento em níveis, reatribuição, resolução) e projeção do dashboard com resumo.
+- Backend: PostgreSQL/Prisma (schema e migração), versão em memória, tokens criptografados, sessão
+  assinada, renovação de tokens OAuth, leitura do CRM, hierarquia por departamentos.
+- Instalação guarda tokens, liga eventos de negócios, carrega `tenants/<domínio>.json` e grava o
+  catálogo de pipelines.
+- `POST /bitrix24/events/crm` (tempo real) e agendador (prazos a cada minuto, sincronização completa
+  periódica).
+- Bot: alertas de risco e atraso, aviso ao superior no escalonamento, resumo diário — sem duplicar.
+- Assistente com IA no chat (Claude Opus 5.5, opcional), com redação de nomes de segurados.
+- `GET /api/v1/journey` e histórico do negócio; dashboard com dados reais e atualização automática.
+- Docker Compose (Postgres + pgvector), `.env.example` completo, exemplo de regras.
+- Testes: engine 35, API 48 (inclui PostgreSQL via PGlite), web 55, theme 44, shared 7.
+
+### Corrigido
+
+- Criação de ocorrência enviava o campo `type` do comando ao banco (detectado no teste com
+  PostgreSQL).
+
 ## [0.3.0] — 16/11/2026 — Preparação para portal de testes
 
 ### Adicionado

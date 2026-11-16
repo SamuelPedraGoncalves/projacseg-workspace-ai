@@ -1,29 +1,56 @@
 import type { Deal, JourneySummary } from "@projacseg/shared";
 import { DEMO_BRIEFING, DEMO_DEALS, DEMO_SUMMARY } from "./demo-data";
 
+export interface JourneyData {
+  deals: Deal[];
+  summary: JourneySummary;
+  /** Resumo de prioridades calculado pelo motor de regras (não é IA). */
+  briefing: string;
+  generatedAt: string;
+}
+
 /**
- * Fonte de dados da jornada. A interface só conhece este contrato; trocar a demonstração pela API
- * (que consulta o Bitrix24 no backend) não exige mudar componentes.
+ * Fonte de dados da jornada. A interface só conhece este contrato: demonstração fora do Bitrix24,
+ * API do backend (motor de regras + CRM) dentro dele.
  */
 export interface JourneyRepository {
-  listDeals(): Promise<Deal[]>;
-  getSummary(): Promise<JourneySummary>;
-  /** Resumo de prioridades exibido no banner. Hoje: texto fixo de demonstração. */
-  getBriefing(): Promise<string>;
+  readonly source: "demo" | "crm";
+  getJourney(): Promise<JourneyData>;
 }
 
 export class DemoJourneyRepository implements JourneyRepository {
-  async listDeals(): Promise<Deal[]> {
-    return DEMO_DEALS.map((deal) => ({ ...deal }));
-  }
+  readonly source = "demo";
 
-  async getSummary(): Promise<JourneySummary> {
-    return { ...DEMO_SUMMARY };
-  }
-
-  async getBriefing(): Promise<string> {
-    return DEMO_BRIEFING;
+  async getJourney(): Promise<JourneyData> {
+    return {
+      deals: DEMO_DEALS.map((deal) => ({ ...deal })),
+      summary: { ...DEMO_SUMMARY },
+      briefing: DEMO_BRIEFING,
+      generatedAt: new Date().toISOString(),
+    };
   }
 }
 
-export const journeyRepository: JourneyRepository = new DemoJourneyRepository();
+export class JourneyApiError extends Error {
+  constructor(readonly status: number) {
+    super(status === 401 ? "Sessão expirada. Abra o aplicativo novamente." : "Falha ao carregar.");
+  }
+}
+
+/** Lê GET /api/v1/journey com a sessão assinada pelo backend (não é token do Bitrix24). */
+export class ApiJourneyRepository implements JourneyRepository {
+  readonly source = "crm";
+
+  constructor(
+    private readonly session: string,
+    private readonly baseUrl = "",
+  ) {}
+
+  async getJourney(): Promise<JourneyData> {
+    const response = await fetch(`${this.baseUrl}/api/v1/journey`, {
+      headers: { Authorization: `Bearer ${this.session}` },
+    });
+    if (!response.ok) throw new JourneyApiError(response.status);
+    return (await response.json()) as JourneyData;
+  }
+}

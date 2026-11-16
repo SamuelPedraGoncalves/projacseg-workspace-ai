@@ -11,6 +11,7 @@ describe("API", () => {
     expect(response.json()).toEqual({
       status: "ok",
       service: "projacseg-workspace-api",
+      database: "memory",
       integrations: { bitrix24: "not-configured", llm: "not-configured" },
     });
     await app.close();

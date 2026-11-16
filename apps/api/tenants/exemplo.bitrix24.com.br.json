@@ -1,0 +1,43 @@
+{
+  "calendar": {
+    "utcOffsetMinutes": -180,
+    "workdays": [1, 2, 3, 4, 5],
+    "workStart": "08:00",
+    "workEnd": "18:00",
+    "holidays": ["2026-11-20", "2026-12-25", "2027-01-01"]
+  },
+  "fieldMapping": {
+    "branch": "UF_CRM_RAMO_EXEMPLO",
+    "insuranceType": "UF_CRM_TIPO_EXEMPLO"
+  },
+  "digestTime": "08:00",
+  "aiEnabled": false,
+  "rules": [
+    {
+      "code": "exemplo_enviar_cotacao",
+      "name": "EXEMPLO — Enviar cotação",
+      "enabled": true,
+      "homologated": false,
+      "categoryIds": ["0"],
+      "stageIds": ["PREPARATION"],
+      "action": "Enviar cotação",
+      "kind": "action",
+      "deadline": { "amount": 1, "unit": "business_days" },
+      "riskAtRatio": 0.75,
+      "escalation": { "maxLevels": 2, "interval": { "amount": 1, "unit": "business_days" } }
+    },
+    {
+      "code": "exemplo_aguardar_emissao",
+      "name": "EXEMPLO — Aguardar emissão da seguradora",
+      "enabled": true,
+      "homologated": false,
+      "categoryIds": null,
+      "stageIds": ["EXECUTING"],
+      "action": "Acompanhar emissão",
+      "kind": "waiting",
+      "deadline": { "amount": 5, "unit": "business_days" },
+      "riskAtRatio": 0.8,
+      "escalation": { "maxLevels": 0, "interval": { "amount": 1, "unit": "business_days" } }
+    }
+  ]
+}

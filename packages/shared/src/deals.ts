@@ -1,7 +1,8 @@
 import { z } from "zod";
 
 /** Situação do negócio na jornada do colaborador. */
-export const dealStatusSchema = z.enum(["today", "risk", "waiting", "resolved"]);
+/** `upcoming`: ação com prazo futuro (aparece só em Meus Negócios). */
+export const dealStatusSchema = z.enum(["today", "risk", "waiting", "upcoming", "resolved"]);
 export type DealStatus = z.infer<typeof dealStatusSchema>;
 
 /** Prioridade visual (indicador lateral). Cores semânticas fixas, independentes do tema. */
@@ -41,3 +42,14 @@ export type JourneySummary = z.infer<typeof journeySummarySchema>;
 /** Visões da jornada. `all` = Meus Negócios (todos os não resolvidos). */
 export const journeyViewSchema = z.enum(["today", "all", "risk", "waiting", "resolved"]);
 export type JourneyView = z.infer<typeof journeyViewSchema>;
+
+/** Resposta de GET /api/v1/journey — o dashboard inteiro de um colaborador. */
+export const journeyResponseSchema = z.object({
+  deals: z.array(dealSchema),
+  summary: journeySummarySchema,
+  /** Resumo de prioridades gerado pelo motor de regras (texto determinístico, não é IA). */
+  briefing: z.string(),
+  generatedAt: z.iso.datetime(),
+});
+
+export type JourneyResponse = z.infer<typeof journeyResponseSchema>;

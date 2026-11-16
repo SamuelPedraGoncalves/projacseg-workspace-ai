@@ -8,7 +8,7 @@ import { useDeals } from "./queries";
 const emptyClass = "rounded-(--radius-large) bg-[#f5f5f5] p-10 text-center text-(--text-secondary)";
 
 export function DealList({ view }: { view: JourneyView }) {
-  const { data: deals, isPending, isError } = useDeals();
+  const { data: deals, isPending, isError, error } = useDeals();
   const { openDeal } = useWorkspaceActions();
   const platform = usePlatform();
 
@@ -19,7 +19,9 @@ export function DealList({ view }: { view: JourneyView }) {
   if (isError) {
     return (
       <p role="alert" className={emptyClass}>
-        Não foi possível carregar os negócios.
+        {error instanceof Error && /Sessão/.test(error.message)
+          ? error.message
+          : "Não foi possível carregar os negócios."}
       </p>
     );
   }

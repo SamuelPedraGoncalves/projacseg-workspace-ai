@@ -12,15 +12,16 @@ Guia para agentes de código (Claude Code, Codex, Cursor etc.) no ProjacSeg Work
 
 ## Mapa do monorepo
 
-| Caminho           | Responsabilidade                                                                 |
-| ----------------- | -------------------------------------------------------------------------------- |
-| `apps/web`        | Frontend React (Vite, Tailwind v4, Zustand, TanStack Query, React Router)        |
-| `apps/api`        | Backend Fastify + Zod (esqueleto: health check e portas de integração)           |
-| `packages/theme`  | Motor de temas puro (paleta de 5 tons, tokens CSS, persistência por colaborador) |
-| `packages/shared` | Tipos, schemas Zod e regras puras compartilhadas                                 |
-| `packages/ui`     | Componentes no padrão shadcn/ui (Radix + cva + Tailwind)                         |
-| `docs/`           | Documentação técnica e operacional                                               |
-| `infrastructure/` | Infraestrutura e deploy (ainda não utilizada)                                    |
+| Caminho           | Responsabilidade                                                                                |
+| ----------------- | ----------------------------------------------------------------------------------------------- |
+| `apps/web`        | Frontend React (Vite, Tailwind v4, Zustand, TanStack Query, React Router)                       |
+| `apps/api`        | Backend Fastify: instalação Bitrix24, motor em segundo plano, bot, IA, API do dashboard, Prisma |
+| `packages/engine` | Motor de regras puro e determinístico (prazos, risco, escalonamento, projeção do dashboard)     |
+| `packages/theme`  | Motor de temas puro (paleta de 5 tons, tokens CSS, persistência por colaborador)                |
+| `packages/shared` | Tipos, schemas Zod e regras puras compartilhadas                                                |
+| `packages/ui`     | Componentes no padrão shadcn/ui (Radix + cva + Tailwind)                                        |
+| `docs/`           | Documentação técnica e operacional                                                              |
+| `infrastructure/` | Docker Compose (PostgreSQL + pgvector) para desenvolvimento; deploy futuro                      |
 
 ## Convenções
 

@@ -13,6 +13,7 @@ export default defineConfig([
     "**/test-results",
     "**/playwright-report",
     "docs/reference",
+    "apps/api/src/generated",
   ]),
   {
     files: ["**/*.{ts,tsx,js,mjs}"],
@@ -23,7 +24,10 @@ export default defineConfig([
     },
     rules: {
       "@typescript-eslint/consistent-type-imports": "error",
-      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", ignoreRestSiblings: true },
+      ],
     },
   },
   {

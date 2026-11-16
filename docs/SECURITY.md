@@ -46,6 +46,18 @@
 - Iframe liberado só para os portais autorizados (`frame-ancestors`).
 - Túnel de testes expõe a máquina na internet: encerrar ao fim dos testes.
 
+## Motor, banco e IA
+
+- Tokens OAuth do aplicativo: AES-256-GCM com `TOKEN_ENCRYPTION_KEY` (obrigatória com banco).
+- Sessão do Workspace: HMAC-SHA256 com `SESSION_SECRET` (obrigatório em produção), 8 h; a API só
+  devolve os negócios do próprio colaborador (histórico: dono ou admin).
+- Instalação exige administrador do portal e, com `BITRIX24_CLIENT_ID`, que o acesso seja deste app.
+- Histórico de ocorrências é somente inserção; a aplicação não expõe edição nem exclusão.
+- IA desligada por padrão. Quando ligada, recebe só a projeção do motor e, por padrão, sem nomes de
+  segurados (`AI_REDACT_CLIENT_NAMES=true`). **Pendente:** decisão de LGPD (base legal e contrato de
+  tratamento de dados com o provedor) antes de enviar qualquer dado pessoal.
+- O conteúdo enviado à IA é delimitado e tratado como dado, não instrução.
+
 ## Pendências
 
 - Política de retenção e criptografia dos tokens OAuth.

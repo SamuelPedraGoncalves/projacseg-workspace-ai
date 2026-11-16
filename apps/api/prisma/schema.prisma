@@ -1,63 +1,134 @@
-// RASCUNHO DE MODELAGEM — NÃO APLICADO.
-// O Prisma ainda não está instalado nesta sprint (primeira entrega = frontend). Este arquivo registra a
-// modelagem prevista para revisão. Ver docs/ARCHITECTURE.md e docs/ROADMAP.md.
+// Modelo de dados do Workspace AI (PostgreSQL). Migrações em prisma/migrations.
 
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
-/// Empresa cliente (um portal Bitrix24).
+/// Empresa cliente = um portal Bitrix24.
 model Tenant {
-  id               String            @id @default(cuid())
-  name             String
-  bitrixDomain     String            @unique
-  bitrixMemberId   String            @unique
-  createdAt        DateTime          @default(now())
-  themePreferences ThemePreference[]
+  id               String   @id @default(cuid())
+  domain           String   @unique
+  memberId         String   @unique
+  clientEndpoint   String
+  /// Conferido em todo evento recebido do portal.
+  applicationToken String?
+  /// Tokens OAuth do aplicativo, criptografados (AES-256-GCM). Nunca em texto puro.
+  accessTokenEnc   String?
+  refreshTokenEnc  String?
+  tokenExpiresAt   DateTime?
+  /// Calendário útil, mapeamento de campos, horário do resumo diário, IA ligada/desligada.
+  config           Json
+  installedAt      DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  rules            Rule[]
+  deals            DealSnapshot[]
   occurrences      Occurrence[]
+  themePreferences ThemePreference[]
+  notifications    NotificationLog[]
 }
 
-/// Preferência de tema por colaborador. Um colaborador nunca altera o tema de outro.
+/// Regra operacional configurável (ver packages/engine/src/rules.ts).
+model Rule {
+  id           String   @id @default(cuid())
+  tenantId     String
+  code         String
+  definition   Json
+  enabled      Boolean
+  homologated  Boolean
+  updatedAt    DateTime @updatedAt
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, code])
+}
+
+/// Última fotografia conhecida de cada negócio do CRM.
+model DealSnapshot {
+  tenantId        String
+  dealId          String
+  title           String
+  categoryId      String
+  categoryName    String
+  stageId         String
+  stageName       String
+  stageEnteredAt  DateTime
+  assignedById    String
+  responsibleName String
+  branch          String?
+  insuranceType   String?
+  closed          Boolean
+  syncedAt        DateTime @default(now())
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@id([tenantId, dealId])
+  @@index([tenantId, assignedById])
+}
+
+/// Ocorrência operacional (prazo de uma regra para uma passagem do negócio por uma etapa).
+model Occurrence {
+  id              String            @id @default(cuid())
+  tenantId        String
+  dealId          String
+  ruleCode        String
+  stageId         String
+  stageEnteredAt  DateTime
+  responsibleId   String
+  openedAt        DateTime
+  dueAt           DateTime
+  riskAt          DateTime
+  /// open | at_risk | overdue | resolved
+  status          String
+  escalationLevel Int               @default(0)
+  resolvedAt      DateTime?
+  resolveReason   String?
+  tenant          Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  events          OccurrenceEvent[]
+
+  @@unique([tenantId, dealId, ruleCode, stageEnteredAt])
+  @@index([tenantId, status])
+  @@index([tenantId, responsibleId])
+}
+
+/// Histórico auditável — somente inserção (sem update/delete pela aplicação).
+model OccurrenceEvent {
+  id           String     @id @default(cuid())
+  occurrenceId String
+  tenantId     String
+  type         String
+  actor        String
+  payload      Json
+  createdAt    DateTime   @default(now())
+  occurrence   Occurrence @relation(fields: [occurrenceId], references: [id], onDelete: Cascade)
+
+  @@index([occurrenceId, createdAt])
+}
+
+/// Mensagens enviadas (evita alertas duplicados e registra o que foi comunicado).
+model NotificationLog {
+  id        String   @id @default(cuid())
+  tenantId  String
+  userId    String
+  kind      String
+  dedupeKey String
+  sentAt    DateTime @default(now())
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, dedupeKey])
+}
+
+/// Preferência de tema por colaborador.
 model ThemePreference {
   id           String   @id @default(cuid())
   tenantId     String
   bitrixUserId String
   baseColor    String   @db.VarChar(7)
   updatedAt    DateTime @updatedAt
-  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, bitrixUserId])
-}
-
-/// Ocorrência operacional (atraso, escalonamento…). Histórico imutável e auditável.
-model Occurrence {
-  id           String            @id @default(cuid())
-  tenantId     String
-  bitrixDealId String
-  ruleCode     String
-  responsibleId String
-  status       String
-  createdAt    DateTime          @default(now())
-  tenant       Tenant            @relation(fields: [tenantId], references: [id])
-  events       OccurrenceEvent[]
-
-  @@index([tenantId, bitrixDealId])
-}
-
-/// Linha do tempo da ocorrência (somente inserção).
-model OccurrenceEvent {
-  id           String     @id @default(cuid())
-  occurrenceId String
-  type         String
-  actor        String
-  payload      Json
-  createdAt    DateTime   @default(now())
-  occurrence   Occurrence @relation(fields: [occurrenceId], references: [id])
-
-  @@index([occurrenceId, createdAt])
 }

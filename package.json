@@ -18,7 +18,9 @@
     "format:check": "prettier --check .",
     "test": "pnpm -r test",
     "test:e2e": "pnpm --filter @projacseg/web test:e2e",
-    "portal": "pnpm build && pnpm --filter @projacseg/api start"
+    "portal": "pnpm build && pnpm --filter @projacseg/api start",
+    "db:up": "docker compose -f infrastructure/docker-compose.yml up -d",
+    "db:migrate": "pnpm --filter @projacseg/api db:migrate"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

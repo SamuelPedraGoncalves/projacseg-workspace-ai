@@ -2,105 +2,74 @@
 
 ## Visão geral
 
-Monorepo **pnpm workspaces**. Pacotes internos exportam TypeScript diretamente (sem build por pacote);
-quem consome (Vite no web, esbuild na API, Vitest nos testes) compila.
+Monorepo **pnpm workspaces**. Pacotes internos exportam TypeScript diretamente; quem consome (Vite,
+esbuild, Vitest) compila.
 
 ```
-apps/web ──► packages/ui ──► (Radix, cva, tailwind-merge, lucide)
-   │   └───► packages/theme   (puro, sem React)
-   └───────► packages/shared  (tipos; runtime Zod só na API)
-apps/api ──► packages/shared
+apps/web ──► packages/ui, packages/theme, packages/shared (só tipos + lógica pura)
+apps/api ──► packages/engine ──► packages/shared
 ```
 
-## Frontend (`apps/web`)
-
-| Tecnologia                           | Uso                                                         |
-| ------------------------------------ | ----------------------------------------------------------- |
-| React 19 + TypeScript strict         | Interface                                                   |
-| Vite 8                               | Dev server e build                                          |
-| Tailwind CSS 4 (`@tailwindcss/vite`) | Estilos utilitários sobre os tokens CSS                     |
-| shadcn/ui (padrão)                   | Componentes em `packages/ui` (Radix Dialog + cva + `cn`)    |
-| Lucide React                         | Ícones                                                      |
-| Zustand                              | Estado de interface (diálogos) e do tema                    |
-| TanStack Query                       | Acesso a dados via `JourneyRepository` (hoje demonstrativo) |
-| React Router 7                       | Uma URL por visão da jornada                                |
-| @fontsource/poppins                  | Poppins servida localmente (sem chamada ao Google Fonts)    |
-
-### Organização
-
 ```
-src/
-  app/            providers, rotas, query client, store de UI
-  config/         usuário do modo demonstrativo (variáveis VITE_)
-  layout/         AppShell, Sidebar, PageHeader, UserAvatar, saudação
-  features/
-    journey/      página Minha Jornada, banner, indicadores, configuração das visões
-    deals/        dados demo, repositório, queries, cards, filtros, diálogo de detalhes
-    assistant/    diálogo do assistente fora do Bitrix24 (chat demonstrativo / aviso)
-    theme/        store do tema e diálogo "Personalizar tema"
-  integrations/
-    bitrix24/     carregamento da BX24 JS SDK e operações no portal (usuário, card, chat)
-  platform/       ambiente atual (bitrix24 | demo), contexto React e ações que dependem dele
-  test/           setup e utilitário de renderização
+Bitrix24 ──POST handler/install──► API (Fastify) ──► index.html + sessão assinada ──► React
+Bitrix24 ──eventos de negócio───► /bitrix24/events/crm ──► EngineService ──► PostgreSQL
+Agendador (1 min) ─► prazos, escalonamento, resumo ─► bot (imbot.message.add) ─► chat do Bitrix24
+Colaborador escreve ao bot ─► /bitrix24/events/assistant ─► AssistantService ─► Claude (opcional)
+React ──GET /api/v1/journey (Bearer sessão)──► projeção do motor
 ```
 
-### Ambiente (Bitrix24 ou demonstração)
+## packages/engine — motor de regras (puro, sem IA, sem rede)
 
-`main.tsx` chama `bootstrapPlatform()` antes de renderizar. Dentro de um portal Bitrix24 (iframe com
-`DOMAIN` e `APP_SID` na URL) a BX24 JS SDK é carregada e o usuário vem de `user.current` (nome, ID e
-foto). Fora dele, `createDemoPlatform()`. O resultado (`Platform`) vai para o `PlatformContext`, e
-`useWorkspaceActions()` decide o que **Abrir** e **Assistente** fazem em cada ambiente. Detalhes em
-[INTEGRATIONS.md](INTEGRATIONS.md).
+| Módulo        | Função                                                                                                                            |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `calendar.ts` | Calendário útil (fuso fixo, dias úteis, expediente, feriados); soma tempo corrido, horas úteis e dias úteis                       |
+| `rules.ts`    | Esquema das regras (SLA de etapa), validação, aplicação por pipeline/etapa                                                        |
+| `evaluate.ts` | `evaluateDeal(negócio, regras, ocorrências, calendário, agora)` → comandos: abrir, risco, atraso, escalonar, reatribuir, resolver |
+| `journey.ts`  | `projectJourney` → negócios do dashboard, indicadores e resumo de prioridades (texto determinístico)                              |
 
-### Fluxo de dados
+Não existe comando para cancelar ou adiar escalonamento: a ocorrência só termina quando o negócio sai
+da etapa ou é fechado.
 
-1. A **rota** define a visão (`today`, `all`, `risk`, `waiting`, `resolved`) — fonte única de verdade
-   do filtro, do item ativo no menu e do breadcrumb.
-2. `useDeals()` / `useJourneySummary()` / `useBriefing()` (TanStack Query) chamam o
-   `JourneyRepository`. Hoje: `DemoJourneyRepository`. Futuro: implementação HTTP para a API.
-3. `filterDealsByView` (em `@projacseg/shared/journey`) aplica a regra de filtragem.
-4. Diálogos abertos ficam no `useUiStore` (Zustand).
+## apps/api — backend
 
-### Tema
+| Pasta                      | Responsabilidade                                                                                                                      |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `store/`                   | Contrato `Store`; `memory-store` (testes/sem banco) e `prisma-store` (PostgreSQL)                                                     |
+| `security/`                | `TokenCipher` (AES-256-GCM) e `SessionSigner` (HMAC-SHA256)                                                                           |
+| `integrations/bitrix24/`   | REST client, `Bitrix24Portal` (tokens, renovação, paginação), `CrmReader`, `HierarchyResolver`, `BotMessenger`, `PortalEventVerifier` |
+| `integrations/llm/`        | `LlmProvider` (interface) e `AnthropicProvider` (SDK oficial, fallback do servidor)                                                   |
+| `modules/bitrix-app/`      | Instalação (tokens, eventos, regras, catálogo) e abertura (sessão)                                                                    |
+| `modules/engine/`          | `EngineService`, `DigestService`, `DedupNotifier`, `EngineScheduler`, eventos do CRM                                                  |
+| `modules/journey/`         | Projeção do dashboard, `GET /api/v1/journey`, histórico do negócio                                                                    |
+| `modules/assistant(-bot)/` | Chat do bot: IA com contexto do motor, ou mensagem fixa                                                                               |
+| `modules/tenants/`         | Configuração por empresa (`tenants/<domínio>.json`)                                                                                   |
+| `modules/web-app/`         | Serve o build e responde ao POST do Bitrix24                                                                                          |
+| `prisma/`                  | Schema e migrações (`migrations/20261116000000_init`)                                                                                 |
 
-`packages/theme` é puro: gera paleta e tokens. No web, `createThemeStore` liga o motor ao DOM
-(`document.documentElement`) e a um `ThemePreferenceRepository`. Depois de identificar o colaborador,
-`main.tsx` chama `initialize({ tenantId, bitrixUserId })` antes da primeira renderização, evitando
-"piscar" o tema padrão. Detalhes em
-[DESIGN_SYSTEM.md](DESIGN_SYSTEM.md).
+### Dados (PostgreSQL)
 
-## Backend (`apps/api`) — esqueleto
+`Tenant` (tokens criptografados, config), `Rule`, `DealSnapshot`, `Occurrence` (única por negócio +
+regra + entrada na etapa), `OccurrenceEvent` (somente inserção), `NotificationLog` (deduplicação),
+`ThemePreference`.
 
-| Tecnologia | Uso                                                                      |
-| ---------- | ------------------------------------------------------------------------ |
-| Fastify 5  | Servidor HTTP (`buildApp` separado de `listen` para testes com `inject`) |
-| Zod 4      | Validação da configuração e dos contratos                                |
-| esbuild    | Build em arquivo único (`dist/index.js`), embutindo pacotes do workspace |
-| tsx        | Execução em desenvolvimento                                              |
+### Agendamento
 
-```
-src/
-  app.ts, index.ts          montagem e inicialização
-  config/env.ts             variáveis de ambiente validadas
-  modules/health            GET /health
-  modules/web-app           serve o build do frontend (GET e POST do Bitrix24, fallback do SPA)
-  modules/assistant-bot     POST /bitrix24/events/assistant — eventos do bot do assistente
-  modules/theme-preferences contrato + repositório em memória (sem rota HTTP ainda)
-  integrations/bitrix24     tipos, portas (interfaces) e cliente REST usado pelo bot
-prisma/schema.prisma        RASCUNHO de modelagem, Prisma não instalado
-```
+`EngineScheduler` em processo: a cada `ENGINE_TICK_SECONDS` avança prazos e envia resumos; a cada
+`ENGINE_FULL_SYNC_MINUTES` ressincroniza o CRM (rede de segurança para eventos perdidos). Para mais de
+uma instância, trocar por BullMQ/Redis (interface já isolada).
 
-Camadas previstas por módulo: **domínio** (regras puras), **aplicação** (casos de uso), **infra**
-(Prisma, Bitrix24, LLM) e **interface** (rotas Fastify).
+## apps/web — frontend
 
-## Preparado para depois (não instalado)
+React 19, Vite 8, Tailwind 4, componentes no padrão shadcn (`packages/ui`), Zustand, TanStack Query,
+React Router 7, Poppins local.
 
-- **PostgreSQL + pgvector + Prisma** — ver rascunho em `apps/api/prisma/schema.prisma`.
-- **Redis + BullMQ** — filas do motor de regras e do escalonamento.
-- **Docker Compose** — ambiente local (`infrastructure/`).
-- **LLM** — interface desacoplada de provedor (porta `LlmProvider` a criar na sprint do assistente).
+- `platform/`: detecta o ambiente (Bitrix24 ou demonstração), lê a sessão injetada no HTML e escolhe o
+  repositório de dados (`ApiJourneyRepository` ou `DemoJourneyRepository`).
+- `features/deals/queries.ts`: uma consulta (`/api/v1/journey`) alimenta lista, indicadores e banner;
+  atualização automática a cada 60 s com dados reais.
+- `integrations/bitrix24/`: BX24 JS SDK (foto, card do negócio, chat do bot, instalação).
 
 ## Qualidade
 
-ESLint 10 (flat config, typescript-eslint, react-hooks, react-refresh), Prettier, Vitest 5 +
-Testing Library + jsdom, Playwright (projetos desktop 1649×928 e mobile Pixel 7).
+ESLint 10, Prettier, Vitest 5 (engine, api — inclusive integração com PostgreSQL via PGlite —, web,
+theme, shared), Testing Library, Playwright (desktop 1649×928 e mobile).

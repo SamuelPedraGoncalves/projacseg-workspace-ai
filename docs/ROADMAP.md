@@ -2,48 +2,34 @@
 
 Legenda: ✅ concluído · 🔜 próximo · ⏳ planejado
 
-## ✅ Sprint 1 — Minha Jornada (frontend demonstrativo)
+## ✅ Sprint 1 — Minha Jornada (frontend)
 
-Dashboard, temas, filtros, detalhes, chat demonstrativo, responsividade, acessibilidade, testes e
-documentação. API apenas como esqueleto.
+Dashboard, temas, filtros, responsividade, acessibilidade, integração do frontend com o Bitrix24
+(foto, card do negócio, chat do bot) e preparação da instalação.
 
-Incluído depois, na mesma entrega: integração pelo navegador com o Bitrix24 (foto do perfil no
-avatar, botão Abrir indo ao card do negócio, assistente abrindo o chat do Bitrix24).
+## ✅ Motor operacional e integração (código pronto, sem homologação em portal)
 
-## 🔜 Sprint 2 — Homologação e base de dados
+- Motor de regras determinístico, ocorrências auditáveis, escalonamento automático.
+- Backend com PostgreSQL/Prisma, tokens criptografados, sessão assinada, eventos do CRM, agendador.
+- Comunicação ativa pelo bot e resumo diário.
+- Dashboard com dados reais e atualização automática.
+- Assistente de IA no chat (opcional).
 
-- Homologar layout com a ProjacSeg (comparar com as imagens originais).
-- Homologar os números do levantamento (75 configurações / 26 regras) com os arquivos das automações.
-- Instalar Prisma + PostgreSQL; migrar o rascunho de `schema.prisma`.
-- Docker Compose local (Postgres com pgvector).
-- Validação de contraste WCAG por componente para temas personalizados.
+## 🔜 Homologação (depende da ProjacSeg e do ambiente)
 
-## ⏳ Sprint 3 — Integração Bitrix24 (portal de testes)
-
-- ✅ Preparado: handler aceitando `POST`, página `/install` registrando o bot e endpoint de eventos
-  do bot (ver BITRIX24_SETUP.md).
-- Instalar o aplicativo num **portal de testes** e homologar foto, chat do assistente e instalação.
-- Hospedagem HTTPS estável para os testes (no lugar do túnel).
-- OAuth no backend; mapeamento domínio/`member_id` → `tenantId`.
-- Leitura de negócios, tarefas, departamentos e superiores.
-- Substituir `DemoJourneyRepository` pela API; persistir tema por `tenantId` + `bitrixUserId`.
-
-## ⏳ Sprint 4 — Motor operacional
-
-- Catálogo das regras operacionais configurável por tenant.
-- Cálculo determinístico de prazos (calendário útil).
-- Ocorrências com histórico auditável; escalonamento automático e não bloqueável.
-- Redis + BullMQ para agendamentos e filas; eventos `ONCRMDEALUPDATE`.
-
-## ⏳ Sprint 5 — Assistente de IA
-
-- Porta `LlmProvider` desacoplada; primeiro provedor.
-- Bot do assistente respondendo no chat do Bitrix24 (evento `ONIMBOTMESSAGEADD` → backend → IA).
-- Resumo de prioridades e respostas sobre a carteira do colaborador, usando dados do motor.
-- pgvector para contexto (base de conhecimento).
+- Levantar e homologar as 26 regras (gatilho, prazo, responsável, escalonamento) e o calendário.
+- Mapear os campos do CRM (ramo, tipo, vigência) em `tenants/<domínio>.json`.
+- Conferir o organograma do Bitrix24 (chefes de departamento) — base do escalonamento.
+- Portal de testes + servidor HTTPS + PostgreSQL; instalar e rodar o roteiro de BITRIX24_SETUP.md.
+- Decisão de LGPD e do provedor de IA; ligar a IA para usuários piloto.
+- Piloto em paralelo às automações atuais; só depois desligar automações antigas.
 
 ## ⏳ Depois
 
+- Visão do gestor: equipe, ocorrências escalonadas recebidas, histórico por negócio.
+- Edição de regras pela interface (com trilha de auditoria).
+- BullMQ/Redis para várias instâncias; observabilidade.
+- Base de conhecimento (pgvector) para o assistente.
+- Validação de contraste WCAG por componente para temas personalizados.
 - Dashboard como página inicial no Bitrix24 (após homologação).
-- Visões de gestor (equipe, escalonamentos recebidos).
 - Deploy de produção (somente com autorização).
