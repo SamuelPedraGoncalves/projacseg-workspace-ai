@@ -1,5 +1,6 @@
 import {
   evaluateDeal,
+  ruleMode,
   type DealState,
   type EngineCommand,
   type RuleDefinition,
@@ -25,6 +26,7 @@ const toState = (deal: DealSnapshotRecord): DealState => ({
   stageEnteredAt: deal.stageEnteredAt,
   assignedById: deal.assignedById,
   closed: deal.closed,
+  ...(deal.fields ? { fields: deal.fields } : {}),
 });
 
 /**
@@ -82,7 +84,9 @@ export class EngineService {
   async evaluate(tenant: TenantRecord, deal: DealSnapshotRecord): Promise<void> {
     const rules = await this.deps.store.rules.list(tenant.id);
     const open = await this.deps.store.occurrences.listOpenByDeal(tenant.id, deal.dealId);
-    const commands = evaluateDeal(toState(deal), rules, open, tenant.config.calendar, this.now());
+    const commands = evaluateDeal(toState(deal), rules, open, tenant.config.calendar, this.now(), {
+      roles: tenant.config.roles ?? {},
+    });
     if (commands.length === 0) return;
 
     const rulesByCode = new Map(rules.map((rule) => [rule.code, rule]));
@@ -114,6 +118,48 @@ export class EngineService {
     });
   }
 
+  /**
+   * Envia pelo bot — exceto em regras em **modo sombra**, cujas mensagens ficam só registradas no
+   * histórico (`notification_suppressed`) para comparar com as automações do Bitrix24.
+   */
+  private async notify(
+    tenant: TenantRecord,
+    rule: RuleDefinition | undefined,
+    occurrence: OccurrenceRecord,
+    userId: string,
+    kind: string,
+    dedupeKey: string,
+    message: string,
+  ): Promise<void> {
+    if (!rule || ruleMode(rule) === "shadow") {
+      await this.event(occurrence, "notification_suppressed", { kind, to: userId, mode: "shadow" });
+      return;
+    }
+    await this.deps.notifier.notify(tenant, userId, kind, dedupeKey, message);
+  }
+
+  /** Destinatários de um nível: superior no organograma e/ou papéis da empresa, sem repetição. */
+  private async escalationRecipients(
+    tenant: TenantRecord,
+    rule: RuleDefinition | undefined,
+    responsibleId: string,
+    level: number,
+  ): Promise<{ superiorId?: string; recipients: string[] }> {
+    const config = rule?.escalation.levels?.[level - 1];
+    const recipients: string[] = [];
+    let superiorId: string | undefined;
+    if (!config || config.superior) {
+      superiorId = (await this.deps.superiors.superiors(tenant, responsibleId, level))[level - 1];
+      if (superiorId) recipients.push(superiorId);
+    }
+    for (const role of config?.roles ?? []) {
+      const userId = tenant.config.roles?.[role];
+      if (userId && userId !== responsibleId && !recipients.includes(userId))
+        recipients.push(userId);
+    }
+    return { ...(superiorId ? { superiorId } : {}), recipients };
+  }
+
   private async apply(
     tenant: TenantRecord,
     deal: DealSnapshotRecord,
@@ -121,7 +167,7 @@ export class EngineService {
     rules: Map<string, RuleDefinition>,
     open: Map<string, OccurrenceRecord>,
   ): Promise<void> {
-    const { store, notifier } = this.deps;
+    const { store } = this.deps;
     const calendar = tenant.config.calendar;
     const link = dealLink(tenant.domain, deal.dealId, deal.title);
 
@@ -171,8 +217,10 @@ export class EngineService {
       case "mark_at_risk": {
         const updated = await store.occurrences.update(occurrence.id, { status: "at_risk" });
         await this.event(updated, "at_risk");
-        await notifier.notify(
+        await this.notify(
           tenant,
+          rule,
+          updated,
           updated.responsibleId,
           "at_risk",
           `at_risk:${updated.id}`,
@@ -184,8 +232,10 @@ export class EngineService {
         const updated = await store.occurrences.update(occurrence.id, { status: "overdue" });
         open.set(updated.id, updated);
         await this.event(updated, "overdue");
-        await notifier.notify(
+        await this.notify(
           tenant,
+          rule,
+          updated,
           updated.responsibleId,
           "overdue",
           `overdue:${updated.id}`,
@@ -204,37 +254,47 @@ export class EngineService {
           escalationLevel: command.level,
         });
         open.set(updated.id, updated);
-        const chain = await this.deps.superiors.superiors(
+        const { superiorId, recipients } = await this.escalationRecipients(
           tenant,
+          rule,
           updated.responsibleId,
           command.level,
         );
-        const superior = chain[command.level - 1];
-        if (!superior) {
+        if (recipients.length === 0) {
           await this.event(updated, "escalation_target_missing", { level: command.level });
           this.deps.log.warn(
             { tenant: tenant.domain, dealId: deal.dealId, level: command.level },
-            "Sem superior no organograma do Bitrix24 para este nível.",
+            "Sem destinatário para este nível de escalonamento (organograma ou papéis).",
           );
           return;
         }
-        await this.event(updated, "escalated", { level: command.level, superiorId: superior });
-        await notifier.notify(
+        await this.event(updated, "escalated", {
+          level: command.level,
+          recipients,
+          ...(superiorId ? { superiorId } : {}),
+        });
+        for (const recipient of recipients) {
+          await this.notify(
+            tenant,
+            rule,
+            updated,
+            recipient,
+            "escalation",
+            `escalation:${updated.id}:${command.level}:${recipient === superiorId ? "superior" : recipient}`,
+            engineMessages.escalationToSuperior(
+              action,
+              link,
+              deal.responsibleName,
+              updated.dueAt,
+              command.level,
+              calendar,
+            ),
+          );
+        }
+        await this.notify(
           tenant,
-          superior,
-          "escalation",
-          `escalation:${updated.id}:${command.level}:superior`,
-          engineMessages.escalationToSuperior(
-            action,
-            link,
-            deal.responsibleName,
-            updated.dueAt,
-            command.level,
-            calendar,
-          ),
-        );
-        await notifier.notify(
-          tenant,
+          rule,
+          updated,
           updated.responsibleId,
           "escalation",
           `escalation:${updated.id}:${command.level}:responsible`,

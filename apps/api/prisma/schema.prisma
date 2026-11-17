@@ -62,6 +62,8 @@ model DealSnapshot {
   branch          String?
   insuranceType   String?
   closed          Boolean
+  /// Só os campos usados pelas regras (UF_CRM_* → valores). Ver packages/engine/src/rules.ts.
+  fields          Json?
   syncedAt        DateTime @default(now())
   tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 

@@ -54,6 +54,7 @@ const toDeal = (row: DealRow): DealSnapshotRecord => ({
   responsibleName: row.responsibleName,
   ...(row.branch ? { branch: row.branch } : {}),
   ...(row.insuranceType ? { insuranceType: row.insuranceType } : {}),
+  ...(row.fields ? { fields: row.fields as Record<string, string[]> } : {}),
   closed: row.closed,
 });
 
@@ -130,6 +131,7 @@ export function createPrismaStore(databaseUrl: string): Store {
           branch: deal.branch ?? null,
           insuranceType: deal.insuranceType ?? null,
           closed: deal.closed,
+          fields: deal.fields ? json(deal.fields) : Prisma.DbNull,
           syncedAt: new Date(),
         };
         await db.dealSnapshot.upsert({

@@ -1,14 +1,8 @@
 import type { JourneyResponse } from "@projacseg/shared";
-import type { FastifyInstance, FastifyRequest } from "fastify";
-import type { SessionClaims, SessionSigner } from "../../security/session";
+import type { FastifyInstance } from "fastify";
+import { sessionFromRequest, type SessionSigner } from "../../security/session";
 import type { Store } from "../../store/types";
 import { buildJourney } from "./journey.service";
-
-function sessionOf(request: FastifyRequest, signer: SessionSigner): SessionClaims | null {
-  const header = request.headers.authorization ?? "";
-  const token = header.startsWith("Bearer ") ? header.slice(7) : "";
-  return token ? signer.verify(token) : null;
-}
 
 /**
  * API do dashboard. A identidade vem da sessão assinada pelo backend (nunca de parâmetros do
@@ -21,7 +15,7 @@ export async function journeyRoutes(
   const now = options.now ?? (() => new Date());
 
   app.get("/api/v1/journey", async (request, reply) => {
-    const session = sessionOf(request, options.signer);
+    const session = sessionFromRequest(request, options.signer);
     if (!session) return reply.code(401).send({ error: "Sessão inválida ou expirada" });
     const tenant = await options.store.tenants.findById(session.tenantId);
     if (!tenant) return reply.code(401).send({ error: "Empresa não encontrada" });
@@ -36,7 +30,7 @@ export async function journeyRoutes(
   app.get<{ Params: { dealId: string } }>(
     "/api/v1/deals/:dealId/history",
     async (request, reply) => {
-      const session = sessionOf(request, options.signer);
+      const session = sessionFromRequest(request, options.signer);
       if (!session) return reply.code(401).send({ error: "Sessão inválida ou expirada" });
       const deal = await options.store.deals.get(session.tenantId, request.params.dealId);
       if (!deal || (!session.admin && deal.assignedById !== session.userId)) {

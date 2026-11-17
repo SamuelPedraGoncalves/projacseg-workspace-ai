@@ -8,6 +8,7 @@ export const RULE_COTACAO: RuleDefinition = {
   name: "Enviar cotação",
   enabled: true,
   homologated: false,
+  mode: "active",
   categoryIds: ["0"],
   stageIds: ["PREPARATION"],
   action: "Enviar cotação",

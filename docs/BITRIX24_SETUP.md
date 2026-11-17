@@ -17,7 +17,9 @@ Não use o portal de produção da ProjacSeg sem autorização.
 - Foto e nome do usuário no cabeçalho.
 
 > O motor só age sobre **regras configuradas**. Sem as regras homologadas da ProjacSeg, use as regras
-> de exemplo apenas para testar (ver passo 3).
+> de exemplo apenas para testar (ver passo 3). Regras sem `"mode": "active"` rodam em **modo sombra**:
+> aparecem no dashboard, mas o bot não envia mensagens — é o modo para o portal real enquanto as
+> automações atuais estiverem ligadas.
 
 ## Pré-requisitos
 
@@ -82,7 +84,8 @@ Abra o aplicativo no portal (ou **Reinstalar**). A instalação:
 2. guarda os tokens do aplicativo **criptografados** no banco (o motor trabalha sem ninguém logado);
 3. liga os eventos de negócios (`ONCRMDEALADD`, `ONCRMDEALUPDATE`, `ONCRMDEALDELETE`);
 4. carrega as regras de `tenants/<domínio>.json` e grava o catálogo de pipelines;
-5. registra o bot "Assistente ProjacSeg" e conclui a instalação;
+5. registra o bot "Assistente ProjacSeg" pela API de chatbots 2.0 (`imbot.v2`), com eventos em modo
+   webhook — se falhar, a instalação continua sem o assistente;
 6. dispara a primeira sincronização completa do CRM.
 
 ## 6. Roteiro de teste
@@ -95,7 +98,10 @@ Abra o aplicativo no portal (ou **Reinstalar**). A instalação:
    (ex.: `{ "amount": 5, "unit": "minutes" }`, `riskAtRatio: 0.5`) e reinstale.
 5. Confira as mensagens do bot no chat: alerta, atraso e o aviso ao superior (o chefe do departamento
    do responsável no organograma do Bitrix24).
-6. Escreva ao bot: sem IA ligada, ele avisa que a IA não está ativada.
+6. Escreva ao bot no chat privado: sem IA ligada, ele avisa que a IA não está ativada. Num grupo,
+   mencionado, ele pede para conversar no privado.
+7. Mude uma regra para `"mode": "shadow"` e reinstale: as ocorrências continuam no dashboard e no
+   histórico (`notification_suppressed`), sem mensagens.
 
 ## 7. Ligar a IA no chat (opcional)
 

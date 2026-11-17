@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { TokenCipher } from "../../security/token-cipher";
 import { createMemoryStore } from "../../store/memory-store";
 import { DOMAIN, ENCRYPTION_KEY, at, fakeRest, seedTenant } from "../../test/helpers";
-import { CrmReader } from "./crm-reader";
+import { CrmReader, pickFields } from "./crm-reader";
 import { Bitrix24Portal } from "./portal";
 import { Bitrix24ApiError } from "./rest-client";
 
@@ -134,5 +134,27 @@ describe("CrmReader.toSnapshot", () => {
       closed: false,
     });
     expect(rest.calls.every((call) => call.endpoint === `https://${DOMAIN}/rest/`)).toBe(true);
+  });
+
+  it("lê só os campos das regras, com valores crus normalizados", () => {
+    expect(
+      pickFields(
+        {
+          ID: "1",
+          UF_CRM_LISTA: ["3", 5],
+          UF_CRM_DATA: "2026-11-30T00:00:00+03:00",
+          UF_CRM_VAZIO: "",
+          UF_CRM_ARQUIVO: { id: 9 },
+          UF_CRM_NAO_PEDIDO: "x",
+        },
+        ["UF_CRM_LISTA", "UF_CRM_DATA", "UF_CRM_VAZIO", "UF_CRM_ARQUIVO", "UF_CRM_AUSENTE"],
+      ),
+    ).toEqual({
+      UF_CRM_LISTA: ["3", "5"],
+      UF_CRM_DATA: ["2026-11-30T00:00:00+03:00"],
+      UF_CRM_VAZIO: [],
+      UF_CRM_ARQUIVO: [],
+      UF_CRM_AUSENTE: [],
+    });
   });
 });

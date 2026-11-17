@@ -1,4 +1,5 @@
 import type { FastifyBaseLogger } from "fastify";
+import type { AssistantBot } from "../../integrations/bitrix24/bot-messenger";
 import type { CrmReader } from "../../integrations/bitrix24/crm-reader";
 import type { Bitrix24Portal } from "../../integrations/bitrix24/portal";
 import type { Bitrix24RestClient } from "../../integrations/bitrix24/rest-client";
@@ -25,6 +26,8 @@ interface Deps {
   /** Quando informado, o AUTH_ID precisa pertencer a este aplicativo (app.info → CODE). */
   clientId: string | undefined;
   tenantsDir: string;
+  /** Bot do assistente (imbot.v2), registrado na instalação. */
+  assistantBot?: AssistantBot;
   log: Pick<FastifyBaseLogger, "info" | "warn" | "error">;
   onInstalled?: (tenant: TenantRecord) => void;
 }
@@ -129,6 +132,17 @@ export class BitrixAppService {
       }
     }
 
+    // O Workspace funciona sem o assistente: falha no registro do bot não interrompe a instalação.
+    let assistant: "ready" | "failed" = "failed";
+    if (this.deps.assistantBot) {
+      try {
+        await this.deps.assistantBot.register(tenant, `${publicUrl}/bitrix24/events/assistant`);
+        assistant = "ready";
+      } catch (error) {
+        this.deps.log.warn({ err: error, domain }, "Bot do assistente não registrado.");
+      }
+    }
+
     try {
       await writeCatalogFile(
         this.deps.tenantsDir,
@@ -140,7 +154,7 @@ export class BitrixAppService {
     }
 
     this.deps.log.info(
-      { domain, rules: file?.rules.length ?? 0, configFile: Boolean(file) },
+      { domain, rules: file?.rules.length ?? 0, configFile: Boolean(file), assistant },
       "Aplicativo instalado no portal.",
     );
     this.deps.onInstalled?.(tenant);

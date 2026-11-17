@@ -1,4 +1,4 @@
-import { atLocalTime, isBusinessDay, localDateKey } from "@projacseg/engine";
+import { atLocalTime, isBusinessDay, localDateKey, ruleMode } from "@projacseg/engine";
 import type { Store, TenantRecord } from "../../store/types";
 import { buildJourney } from "../journey/journey.service";
 import type { Notifier } from "./ports";
@@ -6,6 +6,10 @@ import type { Notifier } from "./ports";
 /**
  * Resumo diário enviado pelo bot a cada colaborador com pendências, no horário configurado da
  * empresa (dias úteis). Texto do motor — não é IA. Uma vez por dia por colaborador.
+ *
+ * Só recebe resumo quem tem ocorrência aberta de regra **ativa**: com todas as regras em modo sombra,
+ * nenhum resumo é enviado (o Workspace não manda mensagens enquanto as automações do Bitrix24 cuidam
+ * dos avisos).
  */
 export class DigestService {
   constructor(
@@ -20,8 +24,16 @@ export class DigestService {
     if (!digestTime || !isBusinessDay(now, calendar)) return 0;
     if (now < atLocalTime(now, digestTime, calendar)) return 0;
 
+    const rules = await this.store.rules.list(tenant.id);
+    const active = new Set(
+      rules.filter((rule) => ruleMode(rule) === "active").map((rule) => rule.code),
+    );
     const open = await this.store.occurrences.listOpen(tenant.id);
-    const users = [...new Set(open.map((item) => item.responsibleId))];
+    const users = [
+      ...new Set(
+        open.filter((item) => active.has(item.ruleCode)).map((item) => item.responsibleId),
+      ),
+    ];
     const day = localDateKey(now, calendar);
     let sent = 0;
 

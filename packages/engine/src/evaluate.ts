@@ -1,5 +1,5 @@
-import { addDuration, type BusinessCalendar } from "./calendar";
-import { ruleApplies, type RuleDefinition } from "./rules";
+import { addDuration, parseFieldDate, subtractDuration, type BusinessCalendar } from "./calendar";
+import { conditionsHold, ruleApplies, type DealFields, type RuleDefinition } from "./rules";
 
 /** Estado do negócio no CRM, já normalizado. */
 export interface DealState {
@@ -10,6 +10,14 @@ export interface DealState {
   stageEnteredAt: Date;
   assignedById: string;
   closed: boolean;
+  /** Campos usados pelas regras (condições, datas, responsável por campo). */
+  fields?: DealFields;
+}
+
+/** Configuração da empresa usada na avaliação. */
+export interface EngineContext {
+  /** Papel → ID do usuário no Bitrix24 (`tenants/<domínio>.json`). */
+  roles?: Readonly<Record<string, string>>;
 }
 
 export type OccurrenceStatus = "open" | "at_risk" | "overdue" | "resolved";
@@ -29,7 +37,7 @@ export interface OccurrenceState {
   escalationLevel: number;
 }
 
-export type ResolveReason = "stage_changed" | "deal_closed" | "rule_disabled";
+export type ResolveReason = "stage_changed" | "deal_closed" | "rule_disabled" | "completed";
 
 export type EngineCommand =
   | {
@@ -62,6 +70,35 @@ export function escalationDueAt(
   return at;
 }
 
+/** Responsável pela ocorrência segundo a regra (padrão: responsável do negócio). */
+export function responsibleFor(
+  rule: RuleDefinition,
+  deal: Pick<DealState, "assignedById" | "fields">,
+  context: EngineContext = {},
+): string {
+  const source = rule.responsible;
+  if (source?.from === "role") return context.roles?.[source.role] ?? deal.assignedById;
+  if (source?.from === "field") {
+    const value = deal.fields?.[source.field]?.[0];
+    if (value && /^\d+$/.test(value)) return value;
+  }
+  return deal.assignedById;
+}
+
+/** Vencimento da regra para a passagem atual pela etapa; `null` se a data de referência falta. */
+function dueDateFor(
+  rule: RuleDefinition,
+  deal: DealState,
+  calendar: BusinessCalendar,
+): Date | null {
+  if (!rule.deadlineFrom) return addDuration(deal.stageEnteredAt, rule.deadline, calendar);
+  const anchor = parseFieldDate(deal.fields?.[rule.deadlineFrom.field]?.[0], calendar);
+  if (!anchor) return null;
+  return rule.deadlineFrom.direction === "after"
+    ? addDuration(anchor, rule.deadline, calendar)
+    : subtractDuration(anchor, rule.deadline, calendar);
+}
+
 function sameInstant(a: Date, b: Date): boolean {
   return a.getTime() === b.getTime();
 }
@@ -71,7 +108,8 @@ function sameInstant(a: Date, b: Date): boolean {
  * mesma saída — não depende de IA, rede ou relógio do sistema (o `now` é parâmetro).
  *
  * Não existe comando para cancelar ou adiar escalonamento: a ocorrência só termina quando o negócio
- * realmente avança (sai da etapa) ou é fechado.
+ * realmente avança (sai da etapa), é fechado ou cumpre a condição de conclusão da regra. Condições de
+ * abertura e datas de referência são lidas só na abertura — editá-las depois não encerra nem adia.
  */
 export function evaluateDeal(
   deal: DealState,
@@ -79,8 +117,10 @@ export function evaluateDeal(
   openOccurrences: readonly OccurrenceState[],
   calendar: BusinessCalendar,
   now: Date,
+  context: EngineContext = {},
 ): EngineCommand[] {
   const commands: EngineCommand[] = [];
+  const fields = deal.fields ?? {};
   const rulesByCode = new Map(rules.map((rule) => [rule.code, rule]));
   const open = openOccurrences.filter(
     (item) => item.dealId === deal.dealId && item.status !== "resolved",
@@ -99,6 +139,8 @@ export function evaluateDeal(
       commands.push({ type: "resolve", occurrenceId: occurrence.id, reason: "stage_changed" });
     } else if (!rule || !rule.enabled) {
       commands.push({ type: "resolve", occurrenceId: occurrence.id, reason: "rule_disabled" });
+    } else if (rule.completeWhen && conditionsHold(rule.completeWhen, fields)) {
+      commands.push({ type: "resolve", occurrenceId: occurrence.id, reason: "completed" });
     } else {
       stillOpen.push(occurrence);
     }
@@ -109,10 +151,14 @@ export function evaluateDeal(
   for (const rule of rules) {
     if (!ruleApplies(rule, deal)) continue;
     if (stillOpen.some((item) => item.ruleCode === rule.code)) continue;
+    // Já cumprida ao entrar na etapa: nada a cobrar.
+    if (rule.completeWhen && conditionsHold(rule.completeWhen, fields)) continue;
+    const dueAt = dueDateFor(rule, deal, calendar);
+    if (!dueAt) continue;
     const openedAt = deal.stageEnteredAt;
-    const dueAt = addDuration(openedAt, rule.deadline, calendar);
+    const span = Math.max(0, dueAt.getTime() - openedAt.getTime());
     const riskAt = new Date(
-      openedAt.getTime() + (dueAt.getTime() - openedAt.getTime()) * rule.riskAtRatio,
+      Math.min(dueAt.getTime(), openedAt.getTime() + span * rule.riskAtRatio),
     );
     commands.push({
       type: "open",
@@ -120,7 +166,7 @@ export function evaluateDeal(
       dealId: deal.dealId,
       stageId: deal.stageId,
       stageEnteredAt: deal.stageEnteredAt,
-      responsibleId: deal.assignedById,
+      responsibleId: responsibleFor(rule, deal, context),
       openedAt,
       dueAt,
       riskAt,
@@ -132,12 +178,9 @@ export function evaluateDeal(
   // 3. Transições por tempo e responsável.
   for (const occurrence of stillOpen) {
     const rule = rulesByCode.get(occurrence.ruleCode)!;
-    if (occurrence.responsibleId !== deal.assignedById) {
-      commands.push({
-        type: "reassign",
-        occurrenceId: occurrence.id,
-        responsibleId: deal.assignedById,
-      });
+    const responsibleId = responsibleFor(rule, deal, context);
+    if (occurrence.responsibleId !== responsibleId) {
+      commands.push({ type: "reassign", occurrenceId: occurrence.id, responsibleId });
     }
     if (now >= occurrence.dueAt) {
       if (occurrence.status !== "overdue") {

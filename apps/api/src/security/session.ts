@@ -50,3 +50,13 @@ export class SessionSigner {
     }
   }
 }
+
+/** Sessão do cabeçalho `Authorization: Bearer <sessão>` (nunca de parâmetros do navegador). */
+export function sessionFromRequest(
+  request: { headers: { authorization?: string | undefined } },
+  signer: SessionSigner,
+): SessionClaims | null {
+  const header = request.headers.authorization ?? "";
+  const token = header.startsWith("Bearer ") ? header.slice(7) : "";
+  return token ? signer.verify(token) : null;
+}

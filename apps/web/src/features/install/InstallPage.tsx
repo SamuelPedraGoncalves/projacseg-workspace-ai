@@ -3,36 +3,29 @@ import { CircleCheck, LoaderCircle, TriangleAlert } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { usePlatform } from "../../platform/platform-context";
 
-type Status = "running" | "done" | "error";
-
-/** Endereço público que o Bitrix24 chamará quando alguém escrever para o bot. */
-function assistantEventsUrl(origin: string = window.location.origin): string {
-  return `${origin}/bitrix24/events/assistant`;
-}
+type Status = "running" | "done" | "not-installed" | "unavailable";
 
 /**
  * Página de instalação do aplicativo (caminho de instalação configurado no Bitrix24).
- * Registra o bot do assistente e conclui a instalação. Só funciona dentro do portal.
+ * O servidor já instalou o Workspace e registrou o bot (`imbot.v2`) ao receber esta página; aqui
+ * só conferimos o assistente e concluímos a instalação. Só funciona dentro do portal.
  */
 export function InstallPage() {
   const { installer } = usePlatform();
   const [status, setStatus] = useState<Status>("running");
-  const [error, setError] = useState<string | null>(null);
   const started = useRef(false);
 
   useEffect(() => {
     if (!installer || started.current) return;
     started.current = true;
-    installer
-      .registerAssistant(assistantEventsUrl())
-      .then(() => {
+    void installer.assistantStatus().then((assistant) => {
+      if (assistant === "ready") {
         setStatus("done");
         installer.finish();
-      })
-      .catch((reason: unknown) => {
-        setError(reason instanceof Error ? reason.message : String(reason));
-        setStatus("error");
-      });
+      } else {
+        setStatus(assistant);
+      }
+    });
   }, [installer]);
 
   return (
@@ -52,7 +45,7 @@ export function InstallPage() {
         ) : status === "running" ? (
           <p className="flex items-center justify-center gap-2 text-sm">
             <LoaderCircle className="size-5 animate-spin" aria-hidden="true" />
-            Registrando o assistente no chat do Bitrix24…
+            Conferindo o assistente no chat do Bitrix24…
           </p>
         ) : status === "done" ? (
           <p className="flex items-center justify-center gap-2 text-sm text-(--color-success)">
@@ -63,12 +56,14 @@ export function InstallPage() {
           <div className="text-sm">
             <p className="mb-2 flex items-center justify-center gap-2 text-(--color-danger)">
               <TriangleAlert className="size-5" aria-hidden="true" />
-              Não foi possível registrar o assistente.
+              {status === "not-installed"
+                ? "O assistente não foi registrado neste portal."
+                : "Não foi possível confirmar o assistente agora."}
             </p>
-            <p className="mb-5 text-xs break-words text-(--text-secondary)">{error}</p>
             <p className="mb-5">
               O Workspace funciona sem o assistente; ele pode ser registrado depois reinstalando o
-              aplicativo. Confira se o escopo <strong>imbot</strong> está habilitado.
+              aplicativo. Confira se o escopo <strong>imbot</strong> está habilitado e o log do
+              servidor.
             </p>
             <Button onClick={() => installer.finish()}>Concluir sem o assistente</Button>
           </div>

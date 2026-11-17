@@ -5,27 +5,49 @@ Pacote `packages/engine` (puro, determinístico, sem IA nem rede) + orquestraç�
 
 ## Estado
 
-| Capacidade                                                           | Status                                                                           |
-| -------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| Calendário útil (fuso por empresa, dias úteis, expediente, feriados) | Implementado · testado localmente                                                |
-| Regras "SLA de etapa" (pipeline + etapa → ocorrência com prazo)      | Implementado · testado localmente                                                |
-| Risco, atraso, escalonamento em níveis pelo organograma              | Implementado · testado localmente (mocks e PostgreSQL via PGlite)                |
-| Encerramento só quando o negócio sai da etapa ou é fechado           | Implementado · testado localmente                                                |
-| Histórico somente inserção, deduplicação de avisos                   | Implementado · testado localmente                                                |
-| Regras reais da ProjacSeg                                            | **Bloqueado** — aguardando homologação (só exemplos não homologados)             |
-| Condições por campo do negócio                                       | Planejado (necessário para R02–R24)                                              |
-| Prazo relativo a data do negócio (ex.: antes do início de vigência)  | Planejado (R05, R14)                                                             |
-| Encerramento por campo preenchido                                    | Planejado (R13, R16, R17, R21)                                                   |
-| Responsáveis e destinatários por papel configurável                  | Planejado                                                                        |
-| Modo sombra (calcula e mostra, sem avisar)                           | Planejado — obrigatório antes de rodar ao lado dos robôs atuais                  |
-| Versionamento de regras (`OperationalRuleVersion`)                   | Parcial: regras em arquivo versionado no Git; sem versão no banco                |
-| Suspensão autorizada de prazo                                        | Planejado (precisa de regra homologada; aguardar terceiros não suspende sozinho) |
+| Capacidade                                                                             | Status                                                                           |
+| -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| Calendário útil (fuso por empresa, dias úteis, expediente, feriados), também para trás | Implementado · testado localmente                                                |
+| Regras "SLA de etapa" (pipeline + etapa → ocorrência com prazo)                        | Implementado · testado localmente                                                |
+| Risco, atraso, escalonamento em níveis                                                 | Implementado · testado localmente (mocks e PostgreSQL via PGlite)                |
+| Condições por campo do negócio (`conditions`)                                          | Implementado · testado localmente                                                |
+| Prazo relativo a data do negócio, antes ou depois (`deadlineFrom`)                     | Implementado · testado localmente                                                |
+| Encerramento por campo preenchido (`completeWhen`)                                     | Implementado · testado localmente                                                |
+| Responsável por papel ou por campo de usuário (`responsible`)                          | Implementado · testado localmente                                                |
+| Destinatários do escalonamento por nível: superior e/ou papéis (`escalation.levels`)   | Implementado · testado localmente                                                |
+| Modo sombra por regra (`mode`; padrão `shadow`)                                        | Implementado · testado localmente                                                |
+| Histórico somente inserção, deduplicação de avisos                                     | Implementado · testado localmente                                                |
+| Leitura dos campos usados pelas regras no CRM (`crm.deal.list` com `select`)           | Implementado · testado com mocks · aguardando portal de testes                   |
+| Regras reais da ProjacSeg                                                              | **Bloqueado** — aguardando homologação (só exemplos não homologados)             |
+| Versionamento de regras (`OperationalRuleVersion`)                                     | Parcial: regras em arquivo versionado no Git; sem versão no banco                |
+| Suspensão autorizada de prazo                                                          | Planejado (precisa de regra homologada; aguardar terceiros não suspende sozinho) |
+
+## Formato das regras
+
+Definido e validado em `packages/engine/src/rules.ts`; configurado em `apps/api/tenants/<domínio>.json`
+(ver o README da pasta). Resumo:
+
+| Campo               | Para quê                                                                                                                                                                       |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `mode`              | `shadow` (padrão): calcula, mostra no dashboard e registra `notification_suppressed` no histórico, **sem enviar mensagens**. `active`: envia alertas e escalonamentos pelo bot |
+| `conditions`        | Condições sobre campos do negócio (`equals`, `not_equals`, `in`, `empty`, `not_empty`). Campos de lista comparam o **ID do item**                                              |
+| `deadlineFrom`      | Conta o prazo a partir de uma data do negócio, `before` ou `after`. Sem a data preenchida, a ocorrência não abre                                                               |
+| `completeWhen`      | Conclui a ocorrência quando as condições valem (ex.: "Número do cálculo" preenchido); se já valem na entrada da etapa, nada é aberto                                           |
+| `responsible`       | `assignee` (padrão), `role` (papel da empresa) ou `field` (campo de usuário; vazio → responsável do negócio)                                                                   |
+| `escalation.levels` | Destinatários de cada nível: `superior` (organograma) e/ou `roles`. Sem a lista, cada nível vai ao superior                                                                    |
+
+Decisões que protegem a regra "o comercial não adia nem cancela" (D-039): condições e data de
+referência são lidas **só na abertura**; editar um campo depois não encerra nem adia a ocorrência. As
+saídas continuam sendo: mudar de etapa, fechar o negócio, cumprir `completeWhen` ou a regra ser
+desativada pela configuração.
 
 ## Regras fundamentais (inegociáveis)
 
 O comercial não impede, cancela nem adia escalonamentos ou ocorrências. A indisponibilidade da IA
 não interrompe o motor. Toda ocorrência tem histórico auditável. Escalonamentos já feitos pelo
-Bitrix24 são considerados para não duplicar avisos (modo sombra até a homologação).
+Bitrix24 são considerados para não duplicar avisos: toda regra começa em **modo sombra** e só passa a
+`active` quando a automação equivalente for desligada, com autorização da ProjacSeg. Com todas as
+regras em sombra, nem o resumo diário é enviado.
 
 ## Correspondência com as automações atuais
 
@@ -39,8 +61,9 @@ Bitrix24 são considerados para não duplicar avisos (modo sombra até a homolog
 
 ## Entidades
 
-Já no banco (rascunho aplicado em migração inicial, **não revisada para produção**): `Tenant`, `Rule`,
-`DealSnapshot`, `Occurrence`, `OccurrenceEvent`, `NotificationLog`, `ThemePreference`. Avaliar antes da
+Já no banco (rascunho em duas migrações, **não revisadas para produção**): `Tenant`, `Rule`,
+`DealSnapshot` (com `fields` JSON: só os campos usados pelas regras, migração aditiva
+`20261117000000_deal_fields`), `Occurrence`, `OccurrenceEvent`, `NotificationLog`, `ThemePreference`. Avaliar antes da
 modelagem definitiva: `OperationalRuleVersion`, `EscalationPolicy`, `BusinessCalendar` próprio,
 `IntegrationEvent`, `AuditLog`, `AgentExecution`, `ToolExecution`, `HumanApproval`. Nenhuma migração
 definitiva antes da homologação das regras.

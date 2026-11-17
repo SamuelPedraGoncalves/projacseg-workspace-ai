@@ -137,6 +137,83 @@ function addBusinessMinutes(start: Date, minutes: number, calendar: BusinessCale
   throw new Error("Calendário sem dias úteis suficientes.");
 }
 
+function previousBusinessLocalDay(localDay: Date, calendar: BusinessCalendar): Date {
+  let day = new Date(localDay.getTime() - DAY);
+  for (let guard = 0; guard < 3660 && !isBusinessLocalDay(day, calendar); guard += 1) {
+    day = new Date(day.getTime() - DAY);
+  }
+  return day;
+}
+
+/**
+ * Volta uma duração a partir de `end` (prazos "N dias antes de uma data"). Espelho de `addDuration`:
+ * - business_days: fim do expediente do N-ésimo dia útil antes do dia de `end`
+ *   (N = 0: fim do expediente do próprio dia, ou do dia útil anterior);
+ * - business_hours: consome apenas minutos de expediente, para trás.
+ */
+export function subtractDuration(end: Date, duration: Duration, calendar: BusinessCalendar): Date {
+  const { amount, unit } = duration;
+  switch (unit) {
+    case "minutes":
+      return new Date(end.getTime() - amount * MINUTE);
+    case "hours":
+      return new Date(end.getTime() - amount * 60 * MINUTE);
+    case "calendar_days":
+      return new Date(end.getTime() - amount * DAY);
+    case "business_days": {
+      let day = startOfLocalDay(toLocal(end, calendar));
+      if (!isBusinessLocalDay(day, calendar)) day = previousBusinessLocalDay(day, calendar);
+      for (let count = 0; count < Math.floor(amount); count += 1) {
+        day = previousBusinessLocalDay(day, calendar);
+      }
+      return fromLocal(new Date(day.getTime() + toMinutes(calendar.workEnd) * MINUTE), calendar);
+    }
+    case "business_hours":
+      return subtractBusinessMinutes(end, Math.round(amount * 60), calendar);
+  }
+}
+
+function subtractBusinessMinutes(end: Date, minutes: number, calendar: BusinessCalendar): Date {
+  const open = toMinutes(calendar.workStart);
+  const close = toMinutes(calendar.workEnd);
+  let local = toLocal(end, calendar);
+  let remaining = minutes;
+
+  for (let guard = 0; guard < 100_000; guard += 1) {
+    const day = startOfLocalDay(local);
+    const minuteOfDay = (local.getTime() - day.getTime()) / MINUTE;
+
+    if (!isBusinessLocalDay(day, calendar) || minuteOfDay <= open) {
+      local = new Date(previousBusinessLocalDay(day, calendar).getTime() + close * MINUTE);
+      continue;
+    }
+    const to = Math.min(minuteOfDay, close);
+    const available = to - open;
+    if (remaining <= available) {
+      return fromLocal(new Date(day.getTime() + (to - remaining) * MINUTE), calendar);
+    }
+    remaining -= available;
+    local = new Date(previousBusinessLocalDay(day, calendar).getTime() + close * MINUTE);
+  }
+  throw new Error("Calendário sem dias úteis suficientes.");
+}
+
+/**
+ * Lê uma data de campo do Bitrix24. Data sem hora ("2026-12-10") vale como meia-noite local da
+ * empresa; data e hora em ISO 8601 são usadas como estão. Qualquer outro formato → `null`.
+ */
+export function parseFieldDate(value: string | undefined, calendar: BusinessCalendar): Date | null {
+  if (!value) return null;
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (dateOnly) {
+    const [, year, month, day] = dateOnly.map(Number) as [number, number, number, number];
+    return fromLocal(new Date(Date.UTC(year, month - 1, day)), calendar);
+  }
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(value)) return null;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
 /** Diferença em dias de calendário locais (b - a). */
 export function localDayDiff(a: Date, b: Date, calendar: BusinessCalendar): number {
   const dayA = startOfLocalDay(toLocal(a, calendar)).getTime();

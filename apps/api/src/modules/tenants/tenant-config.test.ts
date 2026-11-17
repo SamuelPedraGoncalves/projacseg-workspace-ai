@@ -33,4 +33,29 @@ describe("configuração por empresa", () => {
     writeFileSync(join(dir, "a.bitrix24.com.json"), JSON.stringify({ rules: [{ code: "X Y" }] }));
     await expect(loadTenantFile(dir, "a.bitrix24.com")).rejects.toThrow();
   });
+
+  it("papéis usados nas regras precisam estar definidos", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "tenants-"));
+    const rule = {
+      code: "r",
+      name: "R",
+      enabled: true,
+      homologated: false,
+      categoryIds: null,
+      stageIds: ["NEW"],
+      action: "Fazer",
+      kind: "action",
+      deadline: { amount: 1, unit: "business_days" },
+      riskAtRatio: 0.5,
+      escalation: { maxLevels: 0, interval: { amount: 1, unit: "business_days" } },
+      responsible: { from: "role", role: "emissao" },
+    };
+    writeFileSync(join(dir, "a.bitrix24.com.json"), JSON.stringify({ rules: [rule] }));
+    await expect(loadTenantFile(dir, "a.bitrix24.com")).rejects.toThrow(/emissao/);
+    writeFileSync(
+      join(dir, "a.bitrix24.com.json"),
+      JSON.stringify({ roles: { emissao: "15" }, rules: [rule] }),
+    );
+    expect((await loadTenantFile(dir, "a.bitrix24.com"))?.config.roles).toEqual({ emissao: "15" });
+  });
 });

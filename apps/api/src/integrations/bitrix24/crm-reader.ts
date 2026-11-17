@@ -38,24 +38,31 @@ export class CrmReader {
 
   constructor(private readonly portal: Bitrix24Portal) {}
 
-  private selectFields(tenant: TenantRecord): string[] {
+  private selectFields(tenant: TenantRecord, ruleFields: readonly string[]): string[] {
     const mapped = Object.values(tenant.config.fieldMapping).filter(Boolean) as string[];
     return [
-      "ID",
-      "TITLE",
-      "CATEGORY_ID",
-      "STAGE_ID",
-      "ASSIGNED_BY_ID",
-      "CLOSED",
-      "MOVED_TIME",
-      "DATE_CREATE",
-      ...mapped,
+      ...new Set([
+        "ID",
+        "TITLE",
+        "CATEGORY_ID",
+        "STAGE_ID",
+        "ASSIGNED_BY_ID",
+        "CLOSED",
+        "MOVED_TIME",
+        "DATE_CREATE",
+        ...mapped,
+        ...ruleFields,
+      ]),
     ];
   }
 
-  async listOpenDeals(tenant: TenantRecord): Promise<RawDeal[]> {
+  /** `ruleFields`: campos usados pelas regras da empresa (`ruleFieldNames`). */
+  async listOpenDeals(
+    tenant: TenantRecord,
+    ruleFields: readonly string[] = [],
+  ): Promise<RawDeal[]> {
     return this.portal.callAll<RawDeal>(tenant, "crm.deal.list", {
-      select: this.selectFields(tenant),
+      select: this.selectFields(tenant, ruleFields),
       filter: { CLOSED: "N" },
       order: { ID: "ASC" },
     });
@@ -126,7 +133,11 @@ export class CrmReader {
     return name;
   }
 
-  async toSnapshot(tenant: TenantRecord, raw: RawDeal): Promise<DealSnapshotRecord> {
+  async toSnapshot(
+    tenant: TenantRecord,
+    raw: RawDeal,
+    ruleFields: readonly string[] = [],
+  ): Promise<DealSnapshotRecord> {
     const catalog = await this.catalog(tenant);
     const categoryId = String(raw.CATEGORY_ID ?? "0");
     const stageId = String(raw.STAGE_ID ?? "");
@@ -153,7 +164,22 @@ export class CrmReader {
       responsibleName: assignedById ? await this.userName(tenant, assignedById) : "Sem responsável",
       ...(branch ? { branch } : {}),
       ...(insuranceType ? { insuranceType } : {}),
+      ...(ruleFields.length > 0 ? { fields: pickFields(raw, ruleFields) } : {}),
       closed: raw.CLOSED === "Y",
     };
   }
+}
+
+/**
+ * Valores crus dos campos usados pelas regras: listas guardam o ID do item, datas o texto ISO do
+ * Bitrix24. Objetos (arquivos, endereços) são ignorados — regras não os usam.
+ */
+export function pickFields(raw: RawDeal, names: readonly string[]): Record<string, string[]> {
+  const toValues = (value: unknown): string[] => {
+    if (value === undefined || value === null || value === "" || value === false) return [];
+    if (Array.isArray(value)) return value.flatMap(toValues);
+    if (typeof value === "object") return [];
+    return [String(value)];
+  };
+  return Object.fromEntries(names.map((name) => [name, toValues(raw[name])]));
 }

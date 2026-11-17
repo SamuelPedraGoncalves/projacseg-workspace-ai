@@ -104,12 +104,19 @@ Detalhe em [DEPENDENCIAS.md](reference/automations/DEPENDENCIAS.md). Pontos prin
 - Teleport: tarefas de cadastro e laço "Enquanto Número do cálculo vazio" indicam dependência do
   número do cálculo; a integração em si não aparece nos modelos (ver INTEGRATIONS.md).
 
-## Lacunas do motor para representar as regras
+## Recursos do motor para representar as regras
 
-1. Condições por campo do negócio (Tipo de Seguro, Ramo, Tipo de Pessoa, forma de pagamento, vazio).
-2. Prazo relativo a uma data do negócio (10/15 dias úteis antes do início de vigência).
-3. Pendência encerrada por campo preenchido, e não só por mudança de etapa.
-4. Responsáveis por **papel** configurável (setor de emissão, gestor nível 2) em vez de usuários fixos.
+Os quatro recursos que faltavam foram implementados e testados localmente em 17/11/2026 (ver
+[OPERATIONAL_ENGINE.md](OPERATIONAL_ENGINE.md)); a tradução das regras reais continua **bloqueada** até a
+homologação:
+
+1. Condições por campo do negócio (Tipo de Seguro, Ramo, Tipo de Pessoa, forma de pagamento, vazio) →
+   `conditions`.
+2. Prazo relativo a uma data do negócio (10/15 dias úteis antes do início de vigência) → `deadlineFrom`.
+3. Pendência encerrada por campo preenchido → `completeWhen`.
+4. Responsáveis e destinatários por **papel** configurável → `responsible` e `escalation.levels`.
+
+Todas as regras começam em **modo sombra** para não duplicar os avisos destas automações.
 
 ## Segurança do material
 

@@ -14,6 +14,8 @@ export interface TenantConfig {
   digestTime: string | null;
   /** Liga as respostas por IA no chat do assistente (requer provedor configurado). */
   aiEnabled: boolean;
+  /** Papéis usados pelas regras (papel → ID do usuário no Bitrix24). Configuração, nunca código. */
+  roles?: Record<string, string>;
 }
 
 export interface TenantRecord {
@@ -30,6 +32,8 @@ export interface TenantRecord {
 
 export interface DealSnapshotRecord extends DealView {
   stageEnteredAt: Date;
+  /** Só os campos que as regras usam (condições, datas, responsável por campo). */
+  fields?: Record<string, string[]>;
 }
 
 export interface OccurrenceRecord extends ProjectedOccurrence {

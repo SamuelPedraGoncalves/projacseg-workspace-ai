@@ -40,6 +40,8 @@ const portalApi = (admin = true) =>
     "event.bind": true,
     "crm.category.list": { categories: [{ id: 0, name: "Automóvel" }] },
     "crm.status.list": [{ STATUS_ID: "PREPARATION", NAME: "Elaborando cotação" }],
+    "imbot.v2.Bot.register": { bot: { id: 92, code: "projacseg_assistant" }, users: [] },
+    "imbot.v2.Bot.update": { bot: { id: 92, code: "projacseg_assistant" }, users: [] },
   });
 
 const sessionFrom = (html: string) => /name="workspace-session" content="([^"]+)"/.exec(html)?.[1];
@@ -90,6 +92,26 @@ describe("instalação e abertura no Bitrix24", () => {
       { event: "ONCRMDEALUPDATE", handler: "http://localhost:80/bitrix24/events/crm" },
       { event: "ONCRMDEALDELETE", handler: "http://localhost:80/bitrix24/events/crm" },
     ]);
+    // Bot do assistente (imbot.v2): registro idempotente + atualização da URL dos eventos.
+    const register = rest.calls.find((call) => call.method === "imbot.v2.Bot.register");
+    expect(register?.params).toMatchObject({
+      fields: {
+        code: "projacseg_assistant",
+        type: "bot",
+        eventMode: "webhook",
+        webhookUrl: "http://localhost:80/bitrix24/events/assistant",
+      },
+    });
+    expect(rest.calls.find((call) => call.method === "imbot.v2.Bot.update")?.params).toMatchObject({
+      botId: 92,
+      fields: { webhookUrl: "http://localhost:80/bitrix24/events/assistant" },
+    });
+    expect(
+      rest.calls.some(
+        (call) => call.method.startsWith("imbot.") && !call.method.startsWith("imbot.v2."),
+      ),
+    ).toBe(false);
+
     const catalog = JSON.parse(readFileSync(join(tenants, `${DOMAIN}.catalog.json`), "utf8"));
     expect(catalog.etapas).toEqual({ PREPARATION: "Elaborando cotação" });
     await app.close();
@@ -224,6 +246,29 @@ describe("eventos do CRM", () => {
     expect(await store.deals.get(tenant.id, "501")).toMatchObject({
       title: "Carlos Almeida - Auto",
     });
+    await app.close();
+  });
+
+  it("falha no registro do bot não impede a instalação", async () => {
+    const rest = fakeRest({
+      "app.info": { CODE: "local.app.1" },
+      "user.current": { ID: "7", NAME: "Lucas" },
+      "user.admin": true,
+      "event.bind": true,
+      "crm.category.list": { categories: [] },
+      "crm.status.list": [],
+      "imbot.v2.Bot.register": new Error("insufficient_scope"),
+    });
+    const { app, store } = await testApp(
+      { WEB_DIST_DIR: webDist(), TENANTS_DIR: tenantsDir() },
+      { restClient: rest.client },
+    );
+    const response = await app.inject({
+      ...frame({ AUTH_ID: "a", REFRESH_ID: "r", member_id: "membro-1" }),
+      url: `/install?DOMAIN=${DOMAIN}&APP_SID=abc`,
+    });
+    expect(sessionFrom(response.body)).toBeTruthy();
+    expect(await store.tenants.findByMemberId("membro-1")).not.toBeNull();
     await app.close();
   });
 });

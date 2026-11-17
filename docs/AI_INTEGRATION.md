@@ -14,14 +14,14 @@
 
 ## Estado atual
 
-| Item                                                                                        | Status                                                                      |
-| ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `LlmProvider` + `AnthropicProvider` (Claude Opus 5.5, fallback do servidor)                 | Implementado · testado com mocks · desligado por padrão                     |
-| Contexto mínimo (projeção do motor) e redação de nomes de segurados                         | Implementado · testado localmente                                           |
-| Bot no chat via `imbot` **v1** (`imbot.register`, `imbot.message.add`, `ONIMBOTMESSAGEADD`) | Implementado · **API descontinuada pela Bitrix24** → migrar para `imbot.v2` |
-| Ferramentas (tool use), aprovação humana, registro de execução por ferramenta               | Planejado                                                                   |
-| Hermes (gerenciado ou próprio)                                                              | Em avaliação — [HERMES_EVALUATION.md](HERMES_EVALUATION.md)                 |
-| Multiagentes (Atena, Íris, Clara — nomes provisórios)                                       | Planejado · só depois de um agente de leitura homologado                    |
+| Item                                                                                                              | Status                                                         |
+| ----------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `LlmProvider` + `AnthropicProvider` (Claude Opus 5.5, fallback do servidor)                                       | Implementado · testado com mocks · desligado por padrão        |
+| Contexto mínimo (projeção do motor) e redação de nomes de segurados                                               | Implementado · testado localmente                              |
+| Bot no chat via `imbot.v2` (`Bot.register`, `Chat.Message.send`, `ONIMBOTV2MESSAGEADD`), dados só no chat privado | Implementado · testado com mocks · aguardando portal de testes |
+| Ferramentas (tool use), aprovação humana, registro de execução por ferramenta                                     | Planejado                                                      |
+| Hermes (gerenciado ou próprio)                                                                                    | Em avaliação — [HERMES_EVALUATION.md](HERMES_EVALUATION.md)    |
+| Multiagentes (Atena, Íris, Clara — nomes provisórios)                                                             | Planejado · só depois de um agente de leitura homologado       |
 
 ## Contratos propostos (AI Gateway)
 

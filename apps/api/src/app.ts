@@ -1,9 +1,10 @@
 import formbody from "@fastify/formbody";
+import { ruleFieldNames } from "@projacseg/engine";
 import Fastify, { type FastifyInstance } from "fastify";
 import { randomBytes } from "node:crypto";
 import qs from "qs";
 import type { Env } from "./config/env";
-import { BotMessenger, type Messenger } from "./integrations/bitrix24/bot-messenger";
+import { AssistantBot, type Messenger } from "./integrations/bitrix24/bot-messenger";
 import { CrmReader } from "./integrations/bitrix24/crm-reader";
 import { PortalEventVerifier } from "./integrations/bitrix24/event-verifier";
 import { HierarchyResolver } from "./integrations/bitrix24/hierarchy";
@@ -45,6 +46,7 @@ export interface AppDeps {
   dealSource?: DealSource;
   superiors?: SuperiorResolver;
   messenger?: Messenger;
+  assistantBot?: AssistantBot;
   now?: () => Date;
 }
 
@@ -87,15 +89,24 @@ export async function buildApp(env: Env, deps: AppDeps = {}): Promise<FastifyIns
   const portal = new Bitrix24Portal(store, cipher, rest, oauth, now);
   const crm = new CrmReader(portal);
   const hierarchy = new HierarchyResolver(portal);
-  const messenger = deps.messenger ?? new BotMessenger(portal, env.BITRIX24_ASSISTANT_BOT_CODE);
+  const assistantBot =
+    deps.assistantBot ?? new AssistantBot(portal, env.BITRIX24_ASSISTANT_BOT_CODE);
+  const messenger = deps.messenger ?? assistantBot;
   const notifier = new DedupNotifier(store, messenger, app.log);
 
+  // Lê do CRM só os campos que as regras da empresa usam.
+  const fieldsFor = async (tenant: { id: string }) =>
+    ruleFieldNames(await store.rules.list(tenant.id));
   const source: DealSource = deps.dealSource ?? {
-    listOpenDeals: async (tenant) =>
-      Promise.all((await crm.listOpenDeals(tenant)).map((raw) => crm.toSnapshot(tenant, raw))),
+    listOpenDeals: async (tenant) => {
+      const fields = await fieldsFor(tenant);
+      return Promise.all(
+        (await crm.listOpenDeals(tenant, fields)).map((raw) => crm.toSnapshot(tenant, raw, fields)),
+      );
+    },
     getDeal: async (tenant, dealId) => {
       const raw = await crm.getDeal(tenant, dealId);
-      return raw ? crm.toSnapshot(tenant, raw) : null;
+      return raw ? crm.toSnapshot(tenant, raw, await fieldsFor(tenant)) : null;
     },
   };
 
@@ -135,6 +146,7 @@ export async function buildApp(env: Env, deps: AppDeps = {}): Promise<FastifyIns
     allowedDomains: env.BITRIX24_ALLOWED_DOMAINS,
     clientId: env.BITRIX24_CLIENT_ID,
     tenantsDir: env.TENANTS_DIR,
+    assistantBot,
     log: app.log,
     onInstalled: (tenant) => {
       hierarchy.invalidate(tenant.id);
@@ -150,12 +162,7 @@ export async function buildApp(env: Env, deps: AppDeps = {}): Promise<FastifyIns
   });
   await app.register(journeyRoutes, { store, signer, now });
   await app.register(crmEventsRoutes, { verifier, engine });
-  await app.register(assistantBotRoutes, {
-    verifier,
-    botCode: env.BITRIX24_ASSISTANT_BOT_CODE,
-    restClient: rest,
-    assistant,
-  });
+  await app.register(assistantBotRoutes, { verifier, bot: assistantBot, assistant, store, signer });
   await registerWebApp(app, {
     distDir: env.WEB_DIST_DIR,
     allowedDomains: env.BITRIX24_ALLOWED_DOMAINS,

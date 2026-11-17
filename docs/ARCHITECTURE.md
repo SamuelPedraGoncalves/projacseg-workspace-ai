@@ -13,7 +13,7 @@ apps/api ──► packages/engine ──► packages/shared
 ```
 Bitrix24 ──POST handler/install──► API (Fastify) ──► index.html + sessão assinada ──► React
 Bitrix24 ──eventos de negócio───► /bitrix24/events/crm ──► EngineService ──► PostgreSQL
-Agendador (1 min) ─► prazos, escalonamento, resumo ─► bot (imbot.message.add) ─► chat do Bitrix24
+Agendador (1 min) ─► prazos, escalonamento, resumo ─► bot (imbot.v2.Chat.Message.send) ─► chat do Bitrix24
 Colaborador escreve ao bot ─► /bitrix24/events/assistant ─► AssistantService ─► Claude (opcional)
 React ──GET /api/v1/journey (Bearer sessão)──► projeção do motor
 ```
@@ -32,19 +32,19 @@ da etapa ou é fechado.
 
 ## apps/api — backend
 
-| Pasta                      | Responsabilidade                                                                                                                      |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `store/`                   | Contrato `Store`; `memory-store` (testes/sem banco) e `prisma-store` (PostgreSQL)                                                     |
-| `security/`                | `TokenCipher` (AES-256-GCM) e `SessionSigner` (HMAC-SHA256)                                                                           |
-| `integrations/bitrix24/`   | REST client, `Bitrix24Portal` (tokens, renovação, paginação), `CrmReader`, `HierarchyResolver`, `BotMessenger`, `PortalEventVerifier` |
-| `integrations/llm/`        | `LlmProvider` (interface) e `AnthropicProvider` (SDK oficial, fallback do servidor)                                                   |
-| `modules/bitrix-app/`      | Instalação (tokens, eventos, regras, catálogo) e abertura (sessão)                                                                    |
-| `modules/engine/`          | `EngineService`, `DigestService`, `DedupNotifier`, `EngineScheduler`, eventos do CRM                                                  |
-| `modules/journey/`         | Projeção do dashboard, `GET /api/v1/journey`, histórico do negócio                                                                    |
-| `modules/assistant(-bot)/` | Chat do bot: IA com contexto do motor, ou mensagem fixa                                                                               |
-| `modules/tenants/`         | Configuração por empresa (`tenants/<domínio>.json`)                                                                                   |
-| `modules/web-app/`         | Serve o build e responde ao POST do Bitrix24                                                                                          |
-| `prisma/`                  | Schema e migrações (`migrations/20261116000000_init`)                                                                                 |
+| Pasta                      | Responsabilidade                                                                                                                                   |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `store/`                   | Contrato `Store`; `memory-store` (testes/sem banco) e `prisma-store` (PostgreSQL)                                                                  |
+| `security/`                | `TokenCipher` (AES-256-GCM) e `SessionSigner` (HMAC-SHA256)                                                                                        |
+| `integrations/bitrix24/`   | REST client, `Bitrix24Portal` (tokens, renovação, paginação), `CrmReader`, `HierarchyResolver`, `AssistantBot` (`imbot.v2`), `PortalEventVerifier` |
+| `integrations/llm/`        | `LlmProvider` (interface) e `AnthropicProvider` (SDK oficial, fallback do servidor)                                                                |
+| `modules/bitrix-app/`      | Instalação (tokens, eventos, regras, catálogo) e abertura (sessão)                                                                                 |
+| `modules/engine/`          | `EngineService`, `DigestService`, `DedupNotifier`, `EngineScheduler`, eventos do CRM                                                               |
+| `modules/journey/`         | Projeção do dashboard, `GET /api/v1/journey`, histórico do negócio                                                                                 |
+| `modules/assistant(-bot)/` | Chat do bot: IA com contexto do motor, ou mensagem fixa                                                                                            |
+| `modules/tenants/`         | Configuração por empresa (`tenants/<domínio>.json`)                                                                                                |
+| `modules/web-app/`         | Serve o build e responde ao POST do Bitrix24                                                                                                       |
+| `prisma/`                  | Schema e migrações (`migrations/20261116000000_init`)                                                                                              |
 
 ### Dados (PostgreSQL)
 

@@ -41,7 +41,7 @@ function bitrixPlatform(
     },
     openDealInCrm: vi.fn(),
     openAssistant: vi.fn(async () => assistantResult),
-    installer: { registerAssistant: vi.fn(async () => undefined), finish: vi.fn() },
+    installer: { assistantStatus: vi.fn(async () => "ready" as const), finish: vi.fn() },
     journey,
   };
   return platform;
@@ -91,24 +91,22 @@ describe("Dentro do Bitrix24", () => {
     expect(platform.openDealInCrm).not.toHaveBeenCalled();
   });
 
-  it("página de instalação registra o assistente e conclui", async () => {
+  it("página de instalação confere o assistente registrado pelo servidor e conclui", async () => {
     const platform = bitrixPlatform();
     renderApp("/install", platform);
     expect(await screen.findByText("Instalação concluída.")).toBeInTheDocument();
-    expect(platform.installer?.registerAssistant).toHaveBeenCalledWith(
-      `${window.location.origin}/bitrix24/events/assistant`,
-    );
+    expect(platform.installer?.assistantStatus).toHaveBeenCalledTimes(1);
     expect(platform.installer?.finish).toHaveBeenCalledTimes(1);
   });
 
-  it("falha no registro do bot permite concluir sem o assistente", async () => {
+  it("assistente não registrado permite concluir sem ele", async () => {
     const user = userEvent.setup();
     const platform = bitrixPlatform();
-    vi.mocked(platform.installer!.registerAssistant).mockRejectedValue(
-      new Error("insufficient_scope"),
-    );
+    vi.mocked(platform.installer!.assistantStatus).mockResolvedValue("not-installed");
     renderApp("/install", platform);
-    expect(await screen.findByText("insufficient_scope")).toBeInTheDocument();
+    expect(
+      await screen.findByText("O assistente não foi registrado neste portal."),
+    ).toBeInTheDocument();
     expect(platform.installer?.finish).not.toHaveBeenCalled();
     await user.click(screen.getByRole("button", { name: "Concluir sem o assistente" }));
     expect(platform.installer?.finish).toHaveBeenCalledTimes(1);

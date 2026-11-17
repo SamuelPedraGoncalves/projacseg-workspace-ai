@@ -20,6 +20,7 @@ export const RULE: RuleDefinition = {
   name: "Enviar cotação",
   enabled: true,
   homologated: false,
+  mode: "active",
   categoryIds: null,
   stageIds: ["PREPARATION"],
   action: "Enviar cotação",

@@ -2,6 +2,32 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
+## [0.6.0] — 17/11/2026 — Bot imbot.v2 e motor em sombra
+
+### Adicionado
+
+- Motor: condições por campo do negócio, prazo antes/depois de uma data do negócio, conclusão por
+  campo preenchido, responsável por papel ou campo, destinatários de escalonamento por nível e modo
+  sombra por regra (padrão). Calendário útil para trás (`subtractDuration`) e leitura de datas de
+  campo.
+- `roles` na configuração da empresa, validado contra as regras.
+- `DealSnapshot.fields` (migração aditiva `20261117000000_deal_fields`, não revisada para produção):
+  só os campos citados pelas regras, lidos do CRM.
+- `GET /api/v1/assistant`: situação do bot e diálogo para abrir o chat.
+
+### Alterado
+
+- Bot do assistente migrado para `imbot.v2`: registro pelo servidor na instalação, eventos
+  `ONIMBOTV2*` em modo webhook, respostas e avisos por `Chat.Message.send` com os tokens do
+  aplicativo. Dados de negócios só no chat privado.
+- Frontend: deixa de chamar `imbot.*` pela BX24; a instalação confere o bot no backend.
+- Resumo diário só para quem tem ocorrência de regra ativa.
+- Teste de PostgreSQL aplica todas as migrações em ordem.
+
+### Removido
+
+- `VITE_BITRIX24_ASSISTANT_BOT_CODE` (o código do bot fica só no servidor).
+
 ## [0.5.0] — 16/11/2026 — Levantamento operacional e avaliação de IA
 
 ### Adicionado

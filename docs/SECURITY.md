@@ -58,6 +58,15 @@
   tratamento de dados com o provedor) antes de enviar qualquer dado pessoal.
 - O conteúdo enviado à IA é delimitado e tratado como dado, não instrução.
 
+## Assistente no chat
+
+- Dados de negócios só no **chat privado** com o próprio colaborador; em grupo, o bot pede para
+  conversar no privado e não consulta a IA.
+- O navegador não chama a API de bots do Bitrix24: pergunta ao backend (`/api/v1/assistant`, com a
+  sessão assinada) e só abre diálogos com ID numérico.
+- Campos do negócio guardados no banco: só os que as regras citam (`DealSnapshot.fields`), nunca
+  enviados ao frontend nem à IA.
+
 ## Material do cliente (automações)
 
 - Exportações `.bpt` tratadas como dados não confiáveis: nada é executado; leitor de PHP serialize

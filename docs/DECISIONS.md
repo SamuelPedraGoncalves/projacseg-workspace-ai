@@ -87,6 +87,9 @@ código `projacseg_assistant` (configurável), nunca por ID fixo — o ID muda a
 existir, mostra um aviso em vez do chat demonstrativo, para não exibir respostas simuladas dentro de
 um portal real.
 
+> **Atualizada por D-040 (17/11/2026):** o bot é localizado pelo backend com `imbot.v2.Bot.list`; o
+> frontend recebe o diálogo de `/api/v1/assistant`. O código continua configurável e nunca há ID fixo.
+
 ## D-017 — Tema inicializado depois de identificar o colaborador
 
 O store do tema passou a ter `initialize(scope)`. Dentro do Bitrix24 o colaborador só é conhecido após
@@ -103,6 +106,9 @@ O Bitrix24 abre aplicativos com `POST`. Em vez de exigir uma hospedagem específ
 `imbot.register` é chamado pela página `/install` com a BX24 JS SDK (o administrador que instala já
 está autenticado). Evita guardar tokens OAuth no backend antes de existir banco e criptografia. A cada
 reinstalação o bot é atualizado (`imbot.update`), o que acompanha a troca de URL do túnel.
+
+> **Substituída por D-040 (17/11/2026):** com banco e tokens criptografados no servidor, o bot passou a
+> ser registrado pelo backend com `imbot.v2` (a v1 está descontinuada).
 
 ## D-020 — Bot responde sem IA, de forma explícita
 
@@ -205,3 +211,29 @@ necessidade comprovada.
 
 Dentro do Bitrix24, negócios demonstrativos não abrem card, o banner não exibe o resumo de
 demonstração e o assistente distingue "não instalado" de "indisponível".
+
+## D-038 — Modo sombra é o padrão das regras
+
+Regra sem `mode` roda em sombra: calcula e mostra, registra `notification_suppressed`, não envia
+mensagens (nem o resumo diário, se não houver regra ativa). Ativar é uma decisão explícita na
+configuração, para não duplicar os avisos das automações atuais.
+
+## D-039 — Condições e datas lidas só na abertura da ocorrência
+
+Mudar um campo ou adiar a data de referência depois não encerra nem adia a ocorrência — senão bastaria
+editar o negócio para escapar do prazo e do escalonamento. Saídas: mudar de etapa, fechar, cumprir
+`completeWhen` ou a regra ser desativada na configuração. A validar com a ProjacSeg (questionário).
+
+## D-040 — Bot registrado pelo servidor; navegador pergunta ao backend
+
+O `imbot.v2` pertence ao aplicativo: registro e envio com os tokens do aplicativo, no servidor. O
+frontend não chama mais a API de bots; recebe o diálogo do bot de `/api/v1/assistant`.
+
+## D-041 — Assistente responde sobre negócios só no chat privado
+
+Num grupo, responder com prioridades e prazos exporia a carteira de alguém a outras pessoas.
+
+## D-042 — Papéis por empresa no lugar de usuários fixos
+
+Responsáveis e destinatários de escalonamento por papel (`roles` em `tenants/<domínio>.json`). Papel
+citado sem usuário impede o carregamento da configuração.

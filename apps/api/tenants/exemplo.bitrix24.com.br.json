@@ -12,32 +12,71 @@
   },
   "digestTime": "08:00",
   "aiEnabled": false,
+  "roles": {
+    "exemplo_supervisao": "1"
+  },
   "rules": [
     {
       "code": "exemplo_enviar_cotacao",
       "name": "EXEMPLO — Enviar cotação",
       "enabled": true,
       "homologated": false,
+      "mode": "active",
       "categoryIds": ["0"],
       "stageIds": ["PREPARATION"],
       "action": "Enviar cotação",
       "kind": "action",
-      "deadline": { "amount": 1, "unit": "business_days" },
+      "deadline": {
+        "amount": 1,
+        "unit": "business_days"
+      },
       "riskAtRatio": 0.75,
-      "escalation": { "maxLevels": 2, "interval": { "amount": 1, "unit": "business_days" } }
+      "escalation": {
+        "maxLevels": 2,
+        "interval": {
+          "amount": 1,
+          "unit": "business_days"
+        },
+        "levels": [
+          {
+            "superior": true,
+            "roles": []
+          },
+          {
+            "superior": false,
+            "roles": ["exemplo_supervisao"]
+          }
+        ]
+      }
     },
     {
       "code": "exemplo_aguardar_emissao",
       "name": "EXEMPLO — Aguardar emissão da seguradora",
       "enabled": true,
       "homologated": false,
+      "mode": "shadow",
       "categoryIds": null,
       "stageIds": ["EXECUTING"],
       "action": "Acompanhar emissão",
       "kind": "waiting",
-      "deadline": { "amount": 5, "unit": "business_days" },
+      "deadline": {
+        "amount": 5,
+        "unit": "business_days"
+      },
       "riskAtRatio": 0.8,
-      "escalation": { "maxLevels": 0, "interval": { "amount": 1, "unit": "business_days" } }
+      "escalation": {
+        "maxLevels": 0,
+        "interval": {
+          "amount": 1,
+          "unit": "business_days"
+        }
+      },
+      "completeWhen": [
+        {
+          "field": "UF_CRM_NUMERO_APOLICE_EXEMPLO",
+          "operator": "not_empty"
+        }
+      ]
     }
   ]
 }

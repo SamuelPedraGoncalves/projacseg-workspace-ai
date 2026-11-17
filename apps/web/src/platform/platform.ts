@@ -1,5 +1,6 @@
 import type { UserContext } from "@projacseg/shared";
 import { getDemoUser } from "../config/session";
+import { fetchAssistantStatus, type AssistantStatus } from "../features/assistant/assistant-api";
 import {
   ApiJourneyRepository,
   DemoJourneyRepository,
@@ -37,14 +38,13 @@ export interface Platform {
 }
 
 export interface AppInstaller {
-  /** Registra/atualiza o bot do assistente apontando para `eventsUrl`. */
-  registerAssistant(eventsUrl: string): Promise<void>;
+  /**
+   * Situação do bot do assistente depois da instalação no servidor (o backend registra o bot com
+   * `imbot.v2` ao instalar).
+   */
+  assistantStatus(): Promise<AssistantStatus["status"]>;
   finish(): void;
 }
-
-/** Código do bot do assistente (identificador da própria aplicação, não um ID do Bitrix24). */
-export const ASSISTANT_BOT_CODE =
-  import.meta.env.VITE_BITRIX24_ASSISTANT_BOT_CODE || "projacseg_assistant";
 
 export function createDemoPlatform(user: UserContext = getDemoUser()): Platform {
   return {
@@ -72,17 +72,21 @@ export function createBitrix24Platform(
     user,
     openDealInCrm: (dealId) => host.openDeal(dealId),
     openAssistant: async () => {
+      // Sem sessão o portal ainda não foi instalado no servidor: não há bot para abrir.
+      if (!session) return "not-installed";
+      const assistant = await fetchAssistantStatus(session);
+      if (assistant.status !== "ready") return assistant.status;
       try {
-        return (await host.openAssistantChat(ASSISTANT_BOT_CODE)) ? "opened" : "not-installed";
+        host.openMessenger(assistant.dialogId);
+        return "opened";
       } catch (error) {
         console.warn("Não foi possível abrir o chat do assistente no Bitrix24.", error);
         return "unavailable";
       }
     },
     installer: {
-      registerAssistant: async (eventsUrl) => {
-        await host.registerAssistantBot(ASSISTANT_BOT_CODE, eventsUrl);
-      },
+      assistantStatus: async () =>
+        session ? (await fetchAssistantStatus(session)).status : "not-installed",
       finish: () => host.finishInstall(),
     },
     // Sem sessão (portal ainda não instalado no backend), mostra a demonstração.

@@ -1,6 +1,6 @@
 import { PGlite } from "@electric-sql/pglite";
 import { PGLiteSocketServer } from "@electric-sql/pglite-socket";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { EngineService } from "../modules/engine/engine.service";
@@ -20,11 +20,13 @@ let store: Store;
 
 beforeAll(async () => {
   pg = new PGlite();
-  const migration = readFileSync(
-    resolve(__dirname, "../../prisma/migrations/20261116000000_init/migration.sql"),
-    "utf8",
-  );
-  await pg.exec(migration);
+  // Todas as migrações versionadas, em ordem — como o `prisma migrate deploy`.
+  const dir = resolve(__dirname, "../../prisma/migrations");
+  for (const name of readdirSync(dir)
+    .filter((item) => /^\d{14}_/.test(item))
+    .sort()) {
+    await pg.exec(readFileSync(resolve(dir, name, "migration.sql"), "utf8"));
+  }
   server = new PGLiteSocketServer({ db: pg, port: PORT, maxConnections: 10 });
   await server.start();
   store = createPrismaStore(
@@ -51,7 +53,12 @@ describe("armazenamento Prisma em PostgreSQL", () => {
     await store.deals.upsert(tenant.id, snapshot());
     await store.deals.upsert(tenant.id, snapshot({ title: "Título novo" }));
     expect((await store.deals.get(tenant.id, "501"))?.title).toBe("Título novo");
+    expect((await store.deals.get(tenant.id, "501"))?.fields).toBeUndefined();
     expect(await store.deals.listByAssignee(tenant.id, "7")).toHaveLength(1);
+
+    const fields = { UF_CRM_NUMERO_CALCULO: ["98765"], UF_CRM_TAGS: [] };
+    await store.deals.upsert(tenant.id, snapshot({ dealId: "502", fields }));
+    expect((await store.deals.get(tenant.id, "502"))?.fields).toEqual(fields);
 
     const input = {
       tenantId: tenant.id,

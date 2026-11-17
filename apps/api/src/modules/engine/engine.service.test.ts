@@ -155,3 +155,78 @@ describe("motor de regras ponta a ponta", () => {
     expect(await saturday.run(w.tenant)).toBe(0);
   });
 });
+
+describe("modo sombra, papéis e campos do negócio", () => {
+  it("regra em sombra calcula e mostra no dashboard, mas não envia mensagens", async () => {
+    const w = await world();
+    await w.store.rules.replaceAll(w.tenant.id, [{ ...RULE, mode: "shadow" }]);
+    await w.engine.fullSync(w.tenant);
+    w.clock.now = at("2026-11-17T12:00:00-03:00");
+    await w.engine.tick(w.tenant);
+    w.clock.now = at("2026-11-17T18:30:00-03:00");
+    await w.engine.tick(w.tenant);
+
+    expect(w.sent).toEqual([]);
+    const [occurrence] = await w.store.occurrences.listOpen(w.tenant.id);
+    expect(occurrence).toMatchObject({ status: "overdue", escalationLevel: 1 });
+    const events = await w.store.occurrences.listEvents(occurrence!.id);
+    expect(events.filter((event) => event.type === "notification_suppressed")).toHaveLength(4);
+    expect(events.map((event) => event.type)).toContain("escalated");
+
+    const journey = await buildJourney(w.store, w.tenant, "7", w.clock.now);
+    expect(journey.deals[0]).toMatchObject({ id: "501", status: "risk" });
+
+    // Sem regra ativa, também não há resumo diário.
+    const digest = new DigestService(w.store, w.notifier, () => w.clock.now);
+    expect(await digest.run(w.tenant)).toBe(0);
+  });
+
+  it("escalonamento por nível: superior no 1º, papel da empresa no 2º", async () => {
+    const w = await world();
+    const tenant = await w.store.tenants.update(w.tenant.id, {
+      config: { ...w.tenant.config, roles: { supervisao: "40" } },
+    });
+    await w.store.rules.replaceAll(tenant.id, [
+      {
+        ...RULE,
+        escalation: {
+          maxLevels: 2,
+          interval: { amount: 1, unit: "business_days" },
+          levels: [
+            { superior: true, roles: [] },
+            { superior: false, roles: ["supervisao"] },
+          ],
+        },
+      },
+    ]);
+    await w.engine.fullSync(tenant);
+    w.clock.now = at("2026-11-18T18:30:00-03:00");
+    await w.engine.tick(tenant);
+    const escalations = w.sent.filter((item) => item.kind === "escalation");
+    expect(escalations.map((item) => item.userId)).toEqual(["20", "7", "40", "7"]);
+  });
+
+  it("responsável por papel e conclusão por campo preenchido", async () => {
+    const w = await world();
+    const tenant = await w.store.tenants.update(w.tenant.id, {
+      config: { ...w.tenant.config, roles: { emissao: "15" } },
+    });
+    await w.store.rules.replaceAll(tenant.id, [
+      {
+        ...RULE,
+        responsible: { from: "role", role: "emissao" },
+        completeWhen: [{ field: "UF_CRM_NUMERO_CALCULO", operator: "not_empty" }],
+      },
+    ]);
+    w.crm.set("501", snapshot({ fields: { UF_CRM_NUMERO_CALCULO: [] } }));
+    await w.engine.fullSync(tenant);
+    const [opened] = await w.store.occurrences.listOpen(tenant.id);
+    expect(opened).toMatchObject({ responsibleId: "15" });
+
+    w.crm.set("501", snapshot({ fields: { UF_CRM_NUMERO_CALCULO: ["98765"] } }));
+    await w.engine.syncDeal(tenant, "501");
+    expect(await w.store.occurrences.listOpen(tenant.id)).toHaveLength(0);
+    const events = await w.store.occurrences.listEvents(opened!.id);
+    expect(events.at(-1)).toMatchObject({ type: "resolved", payload: { reason: "completed" } });
+  });
+});

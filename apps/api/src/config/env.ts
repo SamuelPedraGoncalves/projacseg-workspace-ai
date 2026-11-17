@@ -47,7 +47,7 @@ const envSchema = z.object({
   BITRIX24_ALLOWED_DOMAINS: commaList,
   /** Opcional: fixa o `application_token` esperado nos eventos. */
   BITRIX24_APPLICATION_TOKEN: z.string().optional(),
-  /** Código do bot do assistente (igual ao VITE_BITRIX24_ASSISTANT_BOT_CODE do frontend). */
+  /** Código do bot do assistente (identificador da aplicação; o ID numérico é descoberto no portal). */
   BITRIX24_ASSISTANT_BOT_CODE: z.string().default("projacseg_assistant"),
   /** Credenciais do aplicativo local (renovação de tokens). Só no servidor. */
   BITRIX24_CLIENT_ID: z.string().optional(),

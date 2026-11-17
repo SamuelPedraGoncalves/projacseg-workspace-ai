@@ -2,6 +2,7 @@ import {
   DEFAULT_CALENDAR,
   businessCalendarSchema,
   parseRules,
+  ruleRoles,
   type RuleDefinition,
 } from "@projacseg/engine";
 import { existsSync } from "node:fs";
@@ -25,6 +26,10 @@ const tenantFileSchema = z.object({
     .nullable()
     .optional(),
   aiEnabled: z.boolean().optional(),
+  /** Papel → ID do usuário no Bitrix24 (ex.: "emissao": "15"). Usado por responsável e escalonamento. */
+  roles: z
+    .record(z.string().regex(/^[a-z0-9_]+$/), z.string().regex(/^\d+$/, "ID de usuário numérico"))
+    .optional(),
   rules: z.unknown().optional(),
 });
 
@@ -33,6 +38,7 @@ export const DEFAULT_TENANT_CONFIG: TenantConfig = {
   fieldMapping: {},
   digestTime: "08:00",
   aiEnabled: false,
+  roles: {},
 };
 
 export interface TenantFile {
@@ -47,6 +53,12 @@ export async function loadTenantFile(dir: string, domain: string): Promise<Tenan
   if (!existsSync(path)) return null;
   const raw = JSON.parse(await readFile(path, "utf8")) as unknown;
   const file = tenantFileSchema.parse(raw);
+  const rules = parseRules(file.rules ?? []);
+  const roles = file.roles ?? {};
+  const missing = ruleRoles(rules).filter((role) => !roles[role]);
+  if (missing.length > 0) {
+    throw new Error(`Papéis usados nas regras sem usuário em "roles": ${missing.join(", ")}`);
+  }
   return {
     config: {
       calendar: file.calendar ?? DEFAULT_TENANT_CONFIG.calendar,
@@ -54,8 +66,9 @@ export async function loadTenantFile(dir: string, domain: string): Promise<Tenan
       digestTime:
         file.digestTime === undefined ? DEFAULT_TENANT_CONFIG.digestTime : file.digestTime,
       aiEnabled: file.aiEnabled ?? false,
+      roles,
     },
-    rules: parseRules(file.rules ?? []),
+    rules,
   };
 }
 

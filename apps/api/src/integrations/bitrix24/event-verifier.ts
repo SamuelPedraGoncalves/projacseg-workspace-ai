@@ -1,8 +1,12 @@
 import { z } from "zod";
 import type { Store, TenantRecord } from "../../store/types";
 
+/**
+ * Bloco `auth` dos eventos. Eventos de CRM trazem `access_token`; os do bot v2 (`ONIMBOTV2*`) não —
+ * o servidor nunca usa esse token: responde com os tokens do aplicativo guardados na instalação.
+ */
 export const eventAuthSchema = z.object({
-  access_token: z.string().min(1),
+  access_token: z.string().min(1).optional(),
   domain: z.string().min(1),
   client_endpoint: z.string().min(1),
   member_id: z.string().min(1),

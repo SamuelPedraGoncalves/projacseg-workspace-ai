@@ -13,6 +13,9 @@ export const ASSISTANT_MESSAGES = {
     "motor de regras; tente de novo em alguns minutos.",
   refused:
     "Não posso ajudar com esse pedido. Posso falar sobre seus negócios, prazos e prioridades.",
+  privateOnly:
+    "Para proteger seus dados, só falo sobre negócios e prazos no chat privado. Abra uma conversa " +
+    "direta comigo.",
   welcome:
     "Olá! Sou o assistente ProjacSeg. Pergunte sobre suas prioridades, prazos e negócios. Os prazos " +
     "e escalonamentos são calculados pelo motor de regras; eu explico e resumo.",
