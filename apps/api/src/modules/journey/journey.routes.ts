@@ -2,6 +2,7 @@ import type { JourneyResponse } from "@projacseg/shared";
 import type { FastifyInstance } from "fastify";
 import { sessionFromRequest, type SessionSigner } from "../../security/session";
 import type { Store } from "../../store/types";
+import { inPilot } from "../tenants/pilot";
 import { buildJourney } from "./journey.service";
 
 /**
@@ -19,6 +20,9 @@ export async function journeyRoutes(
     if (!session) return reply.code(401).send({ error: "Sessão inválida ou expirada" });
     const tenant = await options.store.tenants.findById(session.tenantId);
     if (!tenant) return reply.code(401).send({ error: "Empresa não encontrada" });
+    if (!inPilot(tenant, session.userId)) {
+      return reply.code(403).send({ error: "Workspace em piloto: indisponível para este usuário" });
+    }
 
     const generatedAt = now();
     const journey = await buildJourney(options.store, tenant, session.userId, generatedAt);
@@ -32,6 +36,12 @@ export async function journeyRoutes(
     async (request, reply) => {
       const session = sessionFromRequest(request, options.signer);
       if (!session) return reply.code(401).send({ error: "Sessão inválida ou expirada" });
+      const tenant = await options.store.tenants.findById(session.tenantId);
+      if (!tenant || !inPilot(tenant, session.userId)) {
+        return reply
+          .code(403)
+          .send({ error: "Workspace em piloto: indisponível para este usuário" });
+      }
       const deal = await options.store.deals.get(session.tenantId, request.params.dealId);
       if (!deal || (!session.admin && deal.assignedById !== session.userId)) {
         return reply.code(404).send({ error: "Negócio não encontrado" });

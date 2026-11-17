@@ -25,8 +25,9 @@ Não use o portal de produção da ProjacSeg sem autorização.
 
 - Portal Bitrix24 de testes e usuário **administrador**.
 - Node.js 22+ e pnpm 12.
-- PostgreSQL: `pnpm db:up` (Docker) ou um banco gerenciado. Sem banco, a API roda em memória e perde
-  tudo ao reiniciar — serve só para um teste rápido.
+- PostgreSQL: `pnpm db:up` (Docker), `pnpm --filter @projacseg/api db:local` (PGlite, sem Docker —
+  dados em `data/private/pglite`, fora do Git; só para testes nesta máquina) ou um banco gerenciado.
+  Sem banco, a API roda em memória e perde tudo ao reiniciar.
 - Endereço **HTTPS público** para esta máquina (o Bitrix24 na nuvem precisa alcançá-la). Para testes:
   `cloudflared tunnel --url http://localhost:3333` ou `ngrok http 3333`.
 
@@ -73,12 +74,24 @@ pnpm db:migrate
 pnpm portal       # build + API em http://127.0.0.1:3333
 ```
 
+Sem Docker: `pnpm --filter @projacseg/api db:local` (aplica as migrações e serve em 127.0.0.1:5432) e,
+no `.env`, `DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable`.
+
 Em outro terminal, inicie o túnel. Confira `https://<url-pública>/health`: deve mostrar
 `"database": "postgresql"` e `"bitrix24": "configured"`.
 
 ## 5. Instalar
 
-Abra o aplicativo no portal (ou **Reinstalar**). A instalação:
+Abra o aplicativo no portal (ou **Reinstalar**). O Bitrix24 pode chamar o caminho de instalação de
+dois jeitos — pelo navegador (iframe) ou **pelo servidor dele** (`event=ONAPPINSTALL`, bloco `auth`) —
+e o Workspace aceita os dois com as mesmas verificações. No segundo caso nada aparece na tela: a
+reinstalação acontece no servidor (confira o log: "Aplicativo instalado no portal").
+
+Para abrir o aplicativo: `https://<portal>/marketplace/app/<ID>/` (o ID aparece na lista de
+aplicativos locais) ou pelo item de menu. Abrir a URL pública do túnel diretamente mostra só o modo
+demonstrativo.
+
+A instalação:
 
 1. valida que quem instala é administrador e que o acesso é deste aplicativo;
 2. guarda os tokens do aplicativo **criptografados** no banco (o motor trabalha sem ninguém logado);
@@ -103,6 +116,27 @@ Abra o aplicativo no portal (ou **Reinstalar**). A instalação:
 7. Mude uma regra para `"mode": "shadow"` e reinstale: as ocorrências continuam no dashboard e no
    histórico (`notification_suppressed`), sem mensagens.
 
+## Modo piloto (portal real, poucos usuários)
+
+Para testar num portal com dados reais sem afetar os demais colaboradores, defina no arquivo da empresa:
+
+```json
+{ "pilot": { "userIds": ["13"] }, "digestTime": null, "aiEnabled": false, "rules": [] }
+```
+
+O software garante: CRM lido só com filtro pelo responsável do piloto; mensagens só para usuários do
+piloto (escalonamento a chefes fora dele fica no histórico, sem envio); no chat e no aplicativo, quem
+está fora do piloto vê só "em fase de testes", sem dados; bot oculto nas listas do messenger. Remova
+`pilot` e reinstale para liberar a todos — **só com autorização**.
+
+## Página inicial do colaborador
+
+O acesso recomendado é nativo, sem código: fixar **Minha Jornada** no menu lateral e defini-lo como
+**página inicial** (no piloto, só na conta do usuário do piloto; na implantação, verificar com o
+administrador se o menu permite aplicar para todos). Um widget na página inicial Vibe
+(`landing.repowidget.register`) foi avaliado e adiado: visual mais limitado que o aplicativo, sem ganho
+de acesso (decisão D-044).
+
 ## 7. Ligar a IA no chat (opcional)
 
 1. Decida sobre LGPD (ver docs/SECURITY.md): por padrão, os **títulos dos negócios não saem do
@@ -119,14 +153,17 @@ Com túnel rápido, a URL muda a cada execução: atualize os caminhos no aplica
 
 ## Problemas comuns
 
-| Sintoma                                      | Causa provável                                                                                 |
-| -------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Tela em branco no Bitrix24                   | Domínio fora de `BITRIX24_ALLOWED_DOMAINS` (iframe bloqueado) ou servidor/túnel parado         |
-| "Ambiente demonstrativo" dentro do portal    | A página não recebeu `DOMAIN`/`APP_SID` ou a BX24 JS SDK não carregou                          |
-| "Portal ainda não foi instalado no servidor" | Instalação não concluída no backend: veja o log de `pnpm portal` e reinstale                   |
-| Nenhum prazo aparece                         | Sem regras para a etapa: confira `tenants/<domínio>.json` e o catálogo                         |
-| Nenhum escalonamento                         | Responsável sem departamento/chefe no organograma (o log registra `escalation_target_missing`) |
-| Motor para depois de ~1 h                    | `BITRIX24_CLIENT_ID`/`SECRET` ausentes: o token não é renovado                                 |
+| Sintoma                                                | Causa provável                                                                                 |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| Tela em branco no Bitrix24                             | Domínio fora de `BITRIX24_ALLOWED_DOMAINS` (iframe bloqueado) ou servidor/túnel parado         |
+| "Ambiente demonstrativo" dentro do portal              | A página não recebeu `DOMAIN`/`APP_SID` ou a BX24 JS SDK não carregou                          |
+| "Portal ainda não foi instalado no servidor"           | Instalação não concluída no backend: veja o log de `pnpm portal` e reinstale                   |
+| Nenhum prazo aparece                                   | Sem regras para a etapa: confira `tenants/<domínio>.json` e o catálogo                         |
+| Nenhum escalonamento                                   | Responsável sem departamento/chefe no organograma (o log registra `escalation_target_missing`) |
+| Motor para depois de ~1 h                              | `BITRIX24_CLIENT_ID`/`SECRET` ausentes: o token não é renovado                                 |
+| "Reinstalar" não abre nada                             | Normal: a reinstalação veio pelo servidor do Bitrix24. Abra `/marketplace/app/<ID>/`           |
+| "Em fase de testes" dentro do portal                   | Usuário fora de `pilot.userIds`                                                                |
+| Log "Chamada do Bitrix24 sem autenticação reconhecida" | Formato de chamada novo: o log lista só os nomes dos campos recebidos                          |
 
 ## Segurança
 

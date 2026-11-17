@@ -18,14 +18,12 @@ function host() {
 }
 
 const respond = (status: number, body: unknown) =>
-  vi
-    .spyOn(globalThis, "fetch")
-    .mockResolvedValue(
-      new Response(JSON.stringify(body), {
-        status,
-        headers: { "content-type": "application/json" },
-      }),
-    );
+  vi.spyOn(globalThis, "fetch").mockResolvedValue(
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { "content-type": "application/json" },
+    }),
+  );
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -81,5 +79,18 @@ describe("assistente dentro do Bitrix24", () => {
     await expect(
       createBitrix24Platform(bitrix, user, null).installer?.assistantStatus(),
     ).resolves.toBe("not-installed");
+  });
+});
+
+describe("modo piloto", () => {
+  it("reconhece o aviso do backend para quem está fora do piloto", async () => {
+    const { isPilotRestricted } = await import("./platform");
+    const doc = document.implementation.createHTMLDocument("x");
+    expect(isPilotRestricted(doc)).toBe(false);
+    const meta = doc.createElement("meta");
+    meta.name = "workspace-access";
+    meta.content = "restricted";
+    doc.head.append(meta);
+    expect(isPilotRestricted(doc)).toBe(true);
   });
 });

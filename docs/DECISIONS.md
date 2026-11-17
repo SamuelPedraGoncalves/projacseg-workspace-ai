@@ -237,3 +237,22 @@ Num grupo, responder com prioridades e prazos exporia a carteira de alguém a ou
 
 Responsáveis e destinatários de escalonamento por papel (`roles` em `tenants/<domínio>.json`). Papel
 citado sem usuário impede o carregamento da configuração.
+
+## D-043 — Modo piloto aplicado pelo software
+
+Para testar no portal real da ProjacSeg com um único usuário, `pilot.userIds` restringe leitura do
+CRM (filtro na própria consulta), mensagens, chat, aplicativo e API. Escalonamento a chefe fora do piloto
+fica só no histórico. Bot oculto nas listas do messenger.
+
+## D-044 — Página inicial: recurso nativo, sem widget por enquanto
+
+A página inicial Vibe aceita widgets de aplicativos (`landing.repowidget.register`, Vue restrito, sem
+JS próprio, resposta em até 5 s). Para o objetivo — o colaborador acessar fácil e usar sempre — o widget
+não melhora o acesso e tem visual mais pobre que o aplicativo. Acesso pelo menu lateral + página
+inicial nativa; o uso contínuo vem do bot (alertas e resumo) e da utilidade da lista.
+
+## D-045 — Instalação aceita a notificação do servidor do Bitrix24
+
+O portal chamou o caminho de instalação pelo servidor (`ONAPPINSTALL`, bloco `auth`), não pelo
+navegador. Os dois formatos são aceitos, com as mesmas verificações (domínio autorizado, token do
+próprio aplicativo conferido no portal, administrador).

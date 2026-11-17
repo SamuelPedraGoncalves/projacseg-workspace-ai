@@ -23,28 +23,30 @@ gestão — sem substituir o Bitrix24 e sem aumentar a burocracia.
 **Homologado** (validado com a ProjacSeg em portal) · **Planejado** · **Bloqueado** (depende de
 terceiros) · **Aguardando validação**.
 
-Nada neste repositório está **homologado** até agora.
+Nada neste repositório está **homologado** até agora. Em 17/11/2026 o Workspace foi instalado no
+portal da ProjacSeg **em modo piloto** (só o usuário 13, sem regras, sem resumo diário e sem IA), por
+decisão do responsável pelo projeto, apenas para testes — não é uso em produção.
 
 ## Estado real (16/11/2026)
 
-| Área                                                                                    | Status                                                           |
-| --------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| Dashboard Minha Jornada, temas, filtros, responsividade, acessibilidade                 | Testado localmente                                               |
-| Integração do frontend com o Bitrix24 (foto, card do negócio, chat nativo, instalação)  | Testado localmente · aguardando homologação em portal            |
-| Proteção contra abrir negócios fictícios e respostas fictícias em portal real           | Testado localmente                                               |
-| Backend: instalação, tokens criptografados, sessão assinada, leitura do CRM, eventos    | Testado localmente · aguardando portal de testes                 |
-| Motor de regras genérico (calendário, risco, atraso, escalonamento, histórico)          | Testado localmente                                               |
-| Regras reais da ProjacSeg no motor                                                      | **Bloqueado** — aguardando homologação                           |
-| Condições por campo, prazo relativo a data, encerramento por campo, papéis, modo sombra | Testado localmente · aguardando portal de testes                 |
-| PostgreSQL/Prisma (schema + migração inicial)                                           | Testado localmente (PGlite); migração não revisada para produção |
-| Bot do assistente (`imbot.v2`, dados só no chat privado)                                | Testado com mocks · aguardando portal de testes                  |
-| IA no chat (Claude, desligada por padrão)                                               | Testado com mocks · aguardando decisão de LGPD                   |
-| Análise das automações (`tools/bitrix-automations`) e relatórios                        | Testado localmente · interpretação aguardando validação          |
-| Avaliação Alaio Vibecode / Hermes / Chatbots 2.0                                        | Pesquisa documental concluída · PoC planejada                    |
-| MCP de documentação do Bitrix24 (`.mcp.json`)                                           | Configurado no projeto · testado (lista 8 ferramentas)           |
-| Agentes multiagentes, ferramentas com ação, aprovação humana                            | Planejado                                                        |
-| Imagens originais do dashboard em `docs/reference/design/`                              | Bloqueado — imagens não recebidas                                |
-| Deploy de produção                                                                      | Não autorizado                                                   |
+| Área                                                                                    | Status                                                                                                       |
+| --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Dashboard Minha Jornada, temas, filtros, responsividade, acessibilidade                 | Testado localmente                                                                                           |
+| Integração com o Bitrix24 (instalação, foto, negócios reais, chat do bot)               | **Testado em portal real em modo piloto** (1 usuário, sem regras nem mensagens automáticas) · não homologado |
+| Proteção contra abrir negócios fictícios e respostas fictícias em portal real           | Testado localmente                                                                                           |
+| Backend: instalação, tokens criptografados, sessão assinada, leitura do CRM, eventos    | Testado localmente · aguardando portal de testes                                                             |
+| Motor de regras genérico (calendário, risco, atraso, escalonamento, histórico)          | Testado localmente                                                                                           |
+| Regras reais da ProjacSeg no motor                                                      | **Bloqueado** — aguardando homologação                                                                       |
+| Condições por campo, prazo relativo a data, encerramento por campo, papéis, modo sombra | Testado localmente · aguardando portal de testes                                                             |
+| PostgreSQL/Prisma (schema + migração inicial)                                           | Testado localmente (PGlite); migração não revisada para produção                                             |
+| Bot do assistente (`imbot.v2`, dados só no chat privado)                                | Testado com mocks · aguardando portal de testes                                                              |
+| IA no chat (Claude, desligada por padrão)                                               | Testado com mocks · aguardando decisão de LGPD                                                               |
+| Análise das automações (`tools/bitrix-automations`) e relatórios                        | Testado localmente · interpretação aguardando validação                                                      |
+| Avaliação Alaio Vibecode / Hermes / Chatbots 2.0                                        | Pesquisa documental concluída · PoC planejada                                                                |
+| MCP de documentação do Bitrix24 (`.mcp.json`)                                           | Configurado no projeto · testado (lista 8 ferramentas)                                                       |
+| Agentes multiagentes, ferramentas com ação, aprovação humana                            | Planejado                                                                                                    |
+| Imagens originais do dashboard em `docs/reference/design/`                              | Bloqueado — imagens não recebidas                                                                            |
+| Deploy de produção                                                                      | Não autorizado                                                                                               |
 
 ### Divergências em relação ao prompt de continuidade
 

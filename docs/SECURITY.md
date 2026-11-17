@@ -58,6 +58,13 @@
   tratamento de dados com o provedor) antes de enviar qualquer dado pessoal.
 - O conteúdo enviado à IA é delimitado e tratado como dado, não instrução.
 
+## Modo piloto
+
+Usado para testar no portal real: a restrição é aplicada pelo software (filtro na consulta ao CRM,
+envio de mensagens, chat, abertura do aplicativo e API), não por instrução a agentes. Dados lidos ficam
+no banco local (`data/private/pglite`, fora do Git). O túnel público expõe a máquina: encerrar ao fim
+dos testes.
+
 ## Assistente no chat
 
 - Dados de negócios só no **chat privado** com o próprio colaborador; em grupo, o bot pede para

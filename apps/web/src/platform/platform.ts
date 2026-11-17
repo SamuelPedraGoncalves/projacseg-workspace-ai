@@ -57,6 +57,13 @@ export function createDemoPlatform(user: UserContext = getDemoUser()): Platform 
   };
 }
 
+/** O backend marca `restricted` quando o colaborador está fora do modo piloto da empresa. */
+export function isPilotRestricted(doc: Document = document): boolean {
+  return (
+    doc.querySelector<HTMLMetaElement>('meta[name="workspace-access"]')?.content === "restricted"
+  );
+}
+
 /** Sessão assinada que o backend injeta no HTML ao abrir o app pelo Bitrix24. */
 export function readWorkspaceSession(doc: Document = document): string | null {
   return doc.querySelector<HTMLMetaElement>('meta[name="workspace-session"]')?.content || null;

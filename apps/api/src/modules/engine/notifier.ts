@@ -1,6 +1,7 @@
 import type { FastifyBaseLogger } from "fastify";
 import type { Messenger } from "../../integrations/bitrix24/bot-messenger";
 import type { Store, TenantRecord } from "../../store/types";
+import { inPilot } from "../tenants/pilot";
 import type { Notifier } from "./ports";
 
 /**
@@ -21,6 +22,8 @@ export class DedupNotifier implements Notifier {
     dedupeKey: string,
     message: string,
   ): Promise<boolean> {
+    // Última barreira do modo piloto: nada sai para quem está fora dele.
+    if (!inPilot(tenant, userId)) return false;
     if (!(await this.store.notifications.claim(tenant.id, userId, kind, dedupeKey))) return false;
     try {
       await this.messenger.sendToUser(tenant, userId, message);

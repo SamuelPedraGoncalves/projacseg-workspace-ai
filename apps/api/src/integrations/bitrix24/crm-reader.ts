@@ -1,4 +1,5 @@
 import type { DealSnapshotRecord, TenantRecord } from "../../store/types";
+import { pilotUsers } from "../../modules/tenants/pilot";
 import type { Bitrix24Portal } from "./portal";
 
 /** Negócio como vem de crm.deal.list / crm.deal.get. */
@@ -63,12 +64,30 @@ export class CrmReader {
   ): Promise<RawDeal[]> {
     return this.portal.callAll<RawDeal>(tenant, "crm.deal.list", {
       select: this.selectFields(tenant, ruleFields),
-      filter: { CLOSED: "N" },
+      filter: { CLOSED: "N", ...this.pilotFilter(tenant) },
       order: { ID: "ASC" },
     });
   }
 
-  async getDeal(tenant: TenantRecord, dealId: string): Promise<RawDeal | null> {
+  /** Modo piloto: o próprio Bitrix24 filtra — negócios de outros responsáveis nem chegam aqui. */
+  private pilotFilter(tenant: TenantRecord): { ASSIGNED_BY_ID?: string[] } {
+    const users = pilotUsers(tenant);
+    return users ? { ASSIGNED_BY_ID: users } : {};
+  }
+
+  /** `null` se o negócio não existe — ou, no modo piloto, se não é de um usuário do piloto. */
+  async getDeal(
+    tenant: TenantRecord,
+    dealId: string,
+    ruleFields: readonly string[] = [],
+  ): Promise<RawDeal | null> {
+    if (pilotUsers(tenant)) {
+      const response = await this.portal.call<RawDeal[]>(tenant, "crm.deal.list", {
+        select: this.selectFields(tenant, ruleFields),
+        filter: { ID: dealId, ...this.pilotFilter(tenant) },
+      });
+      return response.result?.[0] ?? null;
+    }
     try {
       const response = await this.portal.call<RawDeal>(tenant, "crm.deal.get", { id: dealId });
       return response.result ?? null;

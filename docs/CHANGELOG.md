@@ -2,6 +2,22 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
+## [0.7.0] — 17/11/2026 — Primeira instalação no portal (modo piloto)
+
+### Adicionado
+
+- Modo piloto (`pilot.userIds`): CRM, mensagens, chat, aplicativo e API restritos aos usuários do
+  piloto; tela "Em fase de testes" para os demais; bot oculto durante o piloto.
+- Instalação pela notificação do servidor do Bitrix24 (`ONAPPINSTALL`), além do navegador.
+- `db:local`: PostgreSQL local sem Docker (PGlite em disco, fora do Git) para testes.
+- Logs de diagnóstico: instalação recusada (motivo) e chamada sem autenticação reconhecida (só nomes
+  dos campos).
+
+### Testado em portal real
+
+- Instalação, registro do bot `imbot.v2`, leitura dos negócios do usuário do piloto, abertura dentro
+  do Bitrix24, dashboard com dados reais e chat do bot — em modo piloto, sem regras.
+
 ## [0.6.0] — 17/11/2026 — Bot imbot.v2 e motor em sombra
 
 ### Adicionado

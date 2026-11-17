@@ -271,4 +271,65 @@ describe("eventos do CRM", () => {
     expect(await store.tenants.findByMemberId("membro-1")).not.toBeNull();
     await app.close();
   });
+
+  it("instala pela notificação do servidor do Bitrix24 (event=ONAPPINSTALL, bloco auth)", async () => {
+    const rest = portalApi();
+    const { app, store } = await testApp(
+      { WEB_DIST_DIR: webDist(), TENANTS_DIR: tenantsDir(), BITRIX24_CLIENT_ID: "local.app.1" },
+      { restClient: rest.client },
+    );
+    const response = await app.inject({
+      ...frame({}),
+      payload: qs.stringify({
+        event: "ONAPPINSTALL",
+        data: { VERSION: "1", LANGUAGE_ID: "br" },
+        ts: "1763300000",
+        auth: {
+          access_token: "access-y",
+          expires_in: "3600",
+          scope: "crm,user,department,imbot,im",
+          domain: DOMAIN,
+          server_endpoint: "https://oauth.bitrix.info/rest/",
+          status: "L",
+          client_endpoint: `https://${DOMAIN}/rest/`,
+          member_id: "membro-1",
+          user_id: "1",
+          refresh_token: "refresh-y",
+          application_token: "app-token-y",
+        },
+      }),
+      url: "/install",
+    });
+    expect(response.statusCode).toBe(200);
+    const tenant = await store.tenants.findByMemberId("membro-1");
+    expect(tenant?.domain).toBe(DOMAIN);
+    expect(new TokenCipher(ENCRYPTION_KEY).decrypt(tenant!.refreshTokenEnc!)).toBe("refresh-y");
+    // O token foi conferido no próprio portal antes de ser guardado.
+    expect(rest.calls.find((call) => call.method === "app.info")?.token).toBe("access-y");
+    await app.close();
+  });
+
+  it("instalação vinda de portal não autorizado é recusada", async () => {
+    const rest = portalApi();
+    const { app, store } = await testApp(
+      { WEB_DIST_DIR: webDist(), TENANTS_DIR: tenantsDir() },
+      { restClient: rest.client },
+    );
+    await app.inject({
+      ...frame({}),
+      payload: qs.stringify({
+        event: "ONAPPINSTALL",
+        auth: {
+          access_token: "a",
+          refresh_token: "r",
+          domain: "outro.bitrix24.com",
+          member_id: "m",
+        },
+      }),
+      url: "/install",
+    });
+    expect(await store.tenants.findByMemberId("m")).toBeNull();
+    expect(rest.calls).toHaveLength(0);
+    await app.close();
+  });
 });

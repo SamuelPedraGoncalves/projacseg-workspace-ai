@@ -2,24 +2,63 @@ import fastifyStatic from "@fastify/static";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { BitrixAppService, FrameRequest } from "../bitrix-app/bitrix-app.service";
+import {
+  PILOT_RESTRICTED,
+  type BitrixAppService,
+  type FrameRequest,
+} from "../bitrix-app/bitrix-app.service";
 
 /** Prefixos que nunca caem no fallback do SPA. */
 const API_PREFIXES = ["/health", "/bitrix24/", "/api/"];
 
+const text = (value: unknown): string | undefined =>
+  typeof value === "string" || typeof value === "number" ? String(value) : undefined;
+
+/**
+ * Autenticação enviada pelo Bitrix24 ao abrir ou instalar o aplicativo, em dois formatos:
+ * - navegador (iframe): `AUTH_ID`, `REFRESH_ID`, `AUTH_EXPIRES`, `member_id` no corpo e `DOMAIN` na URL;
+ * - servidor do Bitrix24 (`event=ONAPPINSTALL`): bloco `auth[...]` com `access_token`,
+ *   `refresh_token`, `expires_in`, `domain` e `member_id`.
+ * Nos dois casos o token é conferido no próprio portal antes de qualquer uso (ver BitrixAppService).
+ */
 function frameFrom(request: FastifyRequest): FrameRequest {
-  const query = (request.query ?? {}) as Record<string, string | undefined>;
+  const query = (request.query ?? {}) as Record<string, unknown>;
   const body = (typeof request.body === "object" && request.body ? request.body : {}) as Record<
     string,
-    string | undefined
+    unknown
   >;
+  const auth = (typeof body.auth === "object" && body.auth ? body.auth : null) as Record<
+    string,
+    unknown
+  > | null;
+  if (!text(body.AUTH_ID) && auth) {
+    return {
+      domain: text(auth.domain),
+      authId: text(auth.access_token),
+      refreshId: text(auth.refresh_token),
+      authExpires: text(auth.expires_in),
+      memberId: text(auth.member_id),
+    };
+  }
   return {
-    domain: query.DOMAIN,
-    authId: body.AUTH_ID,
-    refreshId: body.REFRESH_ID,
-    authExpires: body.AUTH_EXPIRES,
-    memberId: body.member_id,
+    domain: text(query.DOMAIN),
+    authId: text(body.AUTH_ID),
+    refreshId: text(body.REFRESH_ID),
+    authExpires: text(body.AUTH_EXPIRES),
+    memberId: text(body.member_id),
   };
+}
+
+/** Só os nomes dos campos recebidos (nunca os valores), para diagnosticar formatos inesperados. */
+function fieldNames(request: FastifyRequest): string[] {
+  const names = (value: unknown, prefix = ""): string[] =>
+    typeof value === "object" && value
+      ? Object.entries(value).flatMap(([key, inner]) => names(inner, `${prefix}${key}.`))
+      : [prefix.slice(0, -1)];
+  return [
+    ...names(request.query, "query.").filter(Boolean),
+    ...names(request.body, "body.").filter(Boolean),
+  ];
 }
 
 const escapeAttr = (value: string) =>
@@ -55,28 +94,37 @@ export async function registerWebApp(
 
   await app.register(fastifyStatic, { root: options.distDir, prefix: "/", wildcard: true });
 
-  const sendIndex = (reply: FastifyReply, session: string | null = null) => {
-    const html = session
-      ? indexHtml.replace(
-          "</head>",
-          `<meta name="workspace-session" content="${escapeAttr(session)}" />\n</head>`,
-        )
-      : indexHtml;
+  const sendIndex = (
+    reply: FastifyReply,
+    session: string | typeof PILOT_RESTRICTED | null = null,
+  ) => {
+    // Fora do modo piloto: aviso no lugar do Workspace, sem sessão.
+    const meta =
+      typeof session === "string"
+        ? `<meta name="workspace-session" content="${escapeAttr(session)}" />`
+        : session === PILOT_RESTRICTED
+          ? `<meta name="workspace-access" content="restricted" />`
+          : null;
+    const html = meta ? indexHtml.replace("</head>", `${meta}\n</head>`) : indexHtml;
     return reply.type("text/html; charset=utf-8").send(html);
   };
 
   const handleFrame =
     (kind: "open" | "install") => async (request: FastifyRequest, reply: FastifyReply) => {
-      let session: string | null = null;
+      let session: string | typeof PILOT_RESTRICTED | null = null;
       if (options.bitrixApp) {
+        const frame = frameFrom(request);
+        if (!frame.domain || !frame.authId || !frame.memberId) {
+          request.log.warn(
+            { kind, fields: fieldNames(request) },
+            "Chamada do Bitrix24 sem autenticação reconhecida.",
+          );
+        }
         try {
           session =
             kind === "install"
-              ? await options.bitrixApp.install(
-                  frameFrom(request),
-                  `${request.protocol}://${request.host}`,
-                )
-              : await options.bitrixApp.open(frameFrom(request));
+              ? await options.bitrixApp.install(frame, `${request.protocol}://${request.host}`)
+              : await options.bitrixApp.open(frame);
         } catch (error) {
           request.log.error(
             { err: error },

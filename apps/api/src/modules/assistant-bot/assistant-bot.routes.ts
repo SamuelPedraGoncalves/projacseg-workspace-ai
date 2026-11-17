@@ -8,6 +8,7 @@ import {
 import { sessionFromRequest, type SessionSigner } from "../../security/session";
 import type { Store } from "../../store/types";
 import { ASSISTANT_MESSAGES, type AssistantService } from "../assistant/assistant.service";
+import { inPilot } from "../tenants/pilot";
 
 // No modo webhook o Bitrix24 envia tudo como texto (formulário); no modo fetch, como JSON.
 const id = z.coerce.string().min(1);
@@ -70,13 +71,19 @@ export async function assistantBotRoutes(app: FastifyInstance, options: Assistan
     if (!dialogId) return reply.send({ ok: true, ignored: true });
 
     let message: string | null = null;
-    if (event === "ONIMBOTV2JOINCHAT") {
+    const authorId = data.user?.id ?? data.message?.authorId;
+    if (
+      (event === "ONIMBOTV2JOINCHAT" || event === "ONIMBOTV2MESSAGEADD") &&
+      !inPilot(tenant, authorId)
+    ) {
+      message = ASSISTANT_MESSAGES.pilotOnly;
+    } else if (event === "ONIMBOTV2JOINCHAT") {
       message =
         options.assistant.aiConfigured && tenant.config.aiEnabled
           ? ASSISTANT_MESSAGES.welcome
           : ASSISTANT_MESSAGES.notConnected;
     } else if (event === "ONIMBOTV2MESSAGEADD") {
-      const userId = data.user?.id ?? data.message?.authorId;
+      const userId = authorId;
       if (!userId) return reply.send({ ok: true, ignored: true });
       // No chat privado, o diálogo com o bot é o próprio ID do colaborador.
       const isPrivate = dialogId === userId;

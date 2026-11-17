@@ -16,6 +16,8 @@ export interface TenantConfig {
   aiEnabled: boolean;
   /** Papéis usados pelas regras (papel → ID do usuário no Bitrix24). Configuração, nunca código. */
   roles?: Record<string, string>;
+  /** Modo piloto: o Workspace só funciona para estes usuários (ver modules/tenants/pilot.ts). */
+  pilotUserIds?: string[];
 }
 
 export interface TenantRecord {

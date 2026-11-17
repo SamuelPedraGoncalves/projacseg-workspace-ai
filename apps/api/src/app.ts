@@ -105,8 +105,9 @@ export async function buildApp(env: Env, deps: AppDeps = {}): Promise<FastifyIns
       );
     },
     getDeal: async (tenant, dealId) => {
-      const raw = await crm.getDeal(tenant, dealId);
-      return raw ? crm.toSnapshot(tenant, raw, await fieldsFor(tenant)) : null;
+      const fields = await fieldsFor(tenant);
+      const raw = await crm.getDeal(tenant, dealId, fields);
+      return raw ? crm.toSnapshot(tenant, raw, fields) : null;
     },
   };
 

@@ -30,6 +30,13 @@ const tenantFileSchema = z.object({
   roles: z
     .record(z.string().regex(/^[a-z0-9_]+$/), z.string().regex(/^\d+$/, "ID de usuário numérico"))
     .optional(),
+  /**
+   * Modo piloto: só estes usuários usam o Workspace (leitura do CRM, mensagens, chat, aplicativo).
+   * Para testar num portal real sem afetar os demais colaboradores.
+   */
+  pilot: z
+    .object({ userIds: z.array(z.string().regex(/^\d+$/, "ID de usuário numérico")).min(1) })
+    .optional(),
   rules: z.unknown().optional(),
 });
 
@@ -67,6 +74,7 @@ export async function loadTenantFile(dir: string, domain: string): Promise<Tenan
         file.digestTime === undefined ? DEFAULT_TENANT_CONFIG.digestTime : file.digestTime,
       aiEnabled: file.aiEnabled ?? false,
       roles,
+      ...(file.pilot ? { pilotUserIds: file.pilot.userIds } : {}),
     },
     rules,
   };

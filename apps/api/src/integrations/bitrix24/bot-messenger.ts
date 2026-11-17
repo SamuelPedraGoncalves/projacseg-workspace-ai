@@ -1,4 +1,5 @@
 import type { TenantRecord } from "../../store/types";
+import { pilotUsers } from "../../modules/tenants/pilot";
 import type { Bitrix24Portal } from "./portal";
 
 /** Bot como devolvido pelos métodos `imbot.v2.Bot.*`. */
@@ -45,6 +46,8 @@ export class AssistantBot implements Messenger {
       properties: ASSISTANT_BOT_PROPERTIES,
       eventMode: "webhook",
       webhookUrl,
+      // Modo piloto: bot fora das listas e da busca do messenger para os demais colaboradores.
+      isHidden: pilotUsers(tenant) !== null,
     };
     const registered = await this.portal.call<{ bot?: BotV2 }>(tenant, "imbot.v2.Bot.register", {
       fields: { code: this.code, type: "bot", ...fields },

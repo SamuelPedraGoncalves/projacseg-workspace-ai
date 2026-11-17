@@ -1,0 +1,13 @@
+{
+  "calendar": {
+    "utcOffsetMinutes": -180,
+    "workdays": [1, 2, 3, 4, 5],
+    "workStart": "08:00",
+    "workEnd": "18:00",
+    "holidays": ["2026-11-20", "2026-12-25", "2027-01-01"]
+  },
+  "digestTime": null,
+  "aiEnabled": false,
+  "pilot": { "userIds": ["13"] },
+  "rules": []
+}

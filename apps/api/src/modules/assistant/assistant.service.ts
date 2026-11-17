@@ -13,6 +13,7 @@ export const ASSISTANT_MESSAGES = {
     "motor de regras; tente de novo em alguns minutos.",
   refused:
     "Não posso ajudar com esse pedido. Posso falar sobre seus negócios, prazos e prioridades.",
+  pilotOnly: "O assistente ProjacSeg está em fase de testes e ainda não está disponível para você.",
   privateOnly:
     "Para proteger seus dados, só falo sobre negócios e prazos no chat privado. Abra uma conversa " +
     "direta comigo.",

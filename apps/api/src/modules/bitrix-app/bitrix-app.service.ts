@@ -5,7 +5,11 @@ import type { Bitrix24Portal } from "../../integrations/bitrix24/portal";
 import type { Bitrix24RestClient } from "../../integrations/bitrix24/rest-client";
 import type { SessionSigner } from "../../security/session";
 import type { Store, TenantRecord } from "../../store/types";
+import { inPilot } from "../tenants/pilot";
 import { DEFAULT_TENANT_CONFIG, loadTenantFile, writeCatalogFile } from "../tenants/tenant-config";
+
+/** Colaborador fora do modo piloto: o aplicativo mostra um aviso, sem sessão. */
+export const PILOT_RESTRICTED = { restricted: true } as const;
 
 /** Campos que o Bitrix24 envia no POST ao abrir ou instalar o aplicativo. */
 export interface FrameRequest {
@@ -68,13 +72,17 @@ export class BitrixAppService {
     return Boolean(domain && this.deps.allowedDomains.includes(domain.toLowerCase()));
   }
 
-  /** Abertura pelo menu do Bitrix24: devolve a sessão do colaborador (ou `null`). */
-  async open(frame: FrameRequest): Promise<string | null> {
+  /**
+   * Abertura pelo menu do Bitrix24: devolve a sessão do colaborador, `PILOT_RESTRICTED` se ele está
+   * fora do modo piloto, ou `null`.
+   */
+  async open(frame: FrameRequest): Promise<string | typeof PILOT_RESTRICTED | null> {
     if (!this.allowed(frame.domain) || !frame.authId || !frame.memberId) return null;
     const tenant = await this.deps.store.tenants.findByMemberId(frame.memberId);
     if (!tenant || tenant.domain !== frame.domain.toLowerCase()) return null;
     try {
       const who = await this.verifyFrame(tenant.domain, frame.authId);
+      if (!inPilot(tenant, who.userId)) return PILOT_RESTRICTED;
       return this.deps.signer.issue({
         tenantId: tenant.id,
         userId: who.userId,
@@ -96,6 +104,16 @@ export class BitrixAppService {
    */
   async install(frame: FrameRequest, publicUrl: string): Promise<string | null> {
     if (!this.allowed(frame.domain) || !frame.authId || !frame.refreshId || !frame.memberId) {
+      this.deps.log.warn(
+        {
+          domain: frame.domain,
+          allowedDomain: this.allowed(frame.domain),
+          hasAuth: Boolean(frame.authId),
+          hasRefresh: Boolean(frame.refreshId),
+          hasMemberId: Boolean(frame.memberId),
+        },
+        "Instalação recusada: portal não autorizado ou autenticação incompleta.",
+      );
       return null;
     }
     const domain = frame.domain.toLowerCase();

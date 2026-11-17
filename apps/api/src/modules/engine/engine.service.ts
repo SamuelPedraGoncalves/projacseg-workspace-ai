@@ -7,6 +7,7 @@ import {
 } from "@projacseg/engine";
 import type { FastifyBaseLogger } from "fastify";
 import type { DealSnapshotRecord, OccurrenceRecord, Store, TenantRecord } from "../../store/types";
+import { inPilot } from "../tenants/pilot";
 import { dealLink, engineMessages } from "./messages";
 import type { DealSource, Notifier, SuperiorResolver } from "./ports";
 
@@ -133,6 +134,10 @@ export class EngineService {
   ): Promise<void> {
     if (!rule || ruleMode(rule) === "shadow") {
       await this.event(occurrence, "notification_suppressed", { kind, to: userId, mode: "shadow" });
+      return;
+    }
+    if (!inPilot(tenant, userId)) {
+      await this.event(occurrence, "notification_suppressed", { kind, to: userId, mode: "pilot" });
       return;
     }
     await this.deps.notifier.notify(tenant, userId, kind, dedupeKey, message);

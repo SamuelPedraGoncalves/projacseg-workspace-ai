@@ -12,7 +12,8 @@
     "test": "prisma generate && vitest run",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
-    "db:migrate:dev": "prisma migrate dev"
+    "db:migrate:dev": "prisma migrate dev",
+    "db:local": "tsx scripts/local-db.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.9.0",
