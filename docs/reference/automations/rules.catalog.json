@@ -1,0 +1,731 @@
+{
+  "status": "consolidado, não homologado",
+  "rules": [
+    {
+      "id": "R01",
+      "pipeline": "Automóvel",
+      "stage": "Concluído",
+      "family": "Preencher dados obrigatórios",
+      "action": "O card do cliente {=Document:CONTACT.NAME} não está completo.",
+      "deadline": "1 dia útil",
+      "responsible": "RESPONSÁVEL_DO_NEGÓCIO",
+      "recreatedInLoop": true,
+      "loopCondition": "Enquanto houver Loop",
+      "conditionVariants": [
+        "Seguro renovável? = Y OU Seguro renovável? = (vazio) E Data Término de Vigência* vazio OU Seguradora* vazio OU Número de Apólice* vazio OU Ramo de Seguro* vazio"
+      ],
+      "configurations": 1,
+      "sources": [
+        {
+          "file": "bp-79",
+          "activity": "A76608_31754_80251_36398",
+          "path": "NÃO › Renovaveis › Automações (E-mail de Certificado D0 / E-mail Manual D1) › Envio de mensagens (E-mail / Whats) com certificado de emissão da apólice. › Enquanto houver Loop › Campos = Vazio"
+        }
+      ]
+    },
+    {
+      "id": "R02",
+      "pipeline": "Automóvel",
+      "stage": "Cotação enviada / Negociação",
+      "family": "Negociação / follow-up",
+      "action": "Negociação",
+      "deadline": "2 dias úteis",
+      "responsible": "RESPONSÁVEL_DO_NEGÓCIO",
+      "recreatedInLoop": true,
+      "loopCondition": "Enquanto etapa for = Cotação enviada/Negociação",
+      "conditionVariants": [
+        "Tipo de Seguro = SEGURO NOVO OU Tipo de Seguro = RENOVAÇÃO DE OUTRA CORRETORA E Tipo de Seguro = SEGURO NOVO",
+        "Tipo de Seguro = SEGURO NOVO OU Tipo de Seguro = RENOVAÇÃO DE OUTRA CORRETORA E Tipo de Seguro = RENOVAÇÃO DE OUTRA CORRETORA"
+      ],
+      "configurations": 2,
+      "sources": [
+        {
+          "file": "bp-71",
+          "activity": "A57640_32990_30141_57649",
+          "path": "NÃO › SEGURO NOVO / RENOVAÇÃO DE OUTRA CORRETORA › Etapa Cotação enviada / Negociação › Controle de inatividade › Se = Seguro Novo › Fluxo de Tarefas (Seguro Novo) › Enquanto etapa for = Cotação enviada/Negociação"
+        },
+        {
+          "file": "bp-71",
+          "activity": "A54134_49133_52767_52733",
+          "path": "NÃO › SEGURO NOVO / RENOVAÇÃO DE OUTRA CORRETORA › Etapa Cotação enviada / Negociação › Controle de inatividade › Se = Renovação Externa › Fluxo de Tarefas (Renovação Externas) › Enquanto etapa for = Cotação enviada/Negociação"
+        }
+      ]
+    },
+    {
+      "id": "R03",
+      "pipeline": "Automóvel",
+      "stage": "Cotação enviada / Negociação",
+      "family": "Negociação / follow-up",
+      "action": "Negociação",
+      "deadline": "5 dias úteis",
+      "responsible": "RESPONSÁVEL_DO_NEGÓCIO",
+      "recreatedInLoop": true,
+      "loopCondition": "Enquanto etapa for = Cotaçao enviada / Negociação",
+      "conditionVariants": [
+        "Tipo de Seguro = RENOVAÇÃO DA PRÓPRIA CORRETORA E Ramo de Seguro* = Automóvel",
+        "Tipo de Seguro = RENOVAÇÃO DA PRÓPRIA CORRETORA E senão (Outros Ramos)"
+      ],
+      "configurations": 2,
+      "sources": [
+        {
+          "file": "bp-71",
+          "activity": "A32530_77419_26142_29082",
+          "path": "NÃO › RENOVAÇÃO › Automações (Cotação enviada/Negociação) › Automações Ativas › Automações Projacseg (TechStone) › Ajusta o titulo do card › Ramo = Seguro Auto › Controle de inatividade › Enquanto etapa for = Cotaçao enviada / Negociação"
+        },
+        {
+          "file": "bp-71",
+          "activity": "A73350_85366_15800_19466",
+          "path": "NÃO › RENOVAÇÃO › Automações (Cotação enviada/Negociação) › Automações Ativas › Automações Projacseg (TechStone) › Ajusta o titulo do card › Outros Ramos › Controle de inatividade › Enquanto etapa for = Cotaçao enviada / Negociação"
+        }
+      ]
+    },
+    {
+      "id": "R04",
+      "pipeline": "Automóvel",
+      "stage": "Entrada do negócio",
+      "family": "Novo negócio (primeiro contato)",
+      "action": "➡️ Novo Negócio Criado - {=Document:CONTACT.NAME}{=Document:COMPANY.TITLE}",
+      "deadline": "3 horas úteis",
+      "responsible": "RESPONSÁVEL_DO_NEGÓCIO",
+      "recreatedInLoop": false,
+      "loopCondition": null,
+      "conditionVariants": [
+        "Tipo de Seguro = SEGURO NOVO OU Tipo de Seguro = RENOVAÇÃO DE OUTRA CORRETORA"
+      ],
+      "configurations": 1,
+      "sources": [
+        {
+          "file": "bp-7",
+          "activity": "A61358_70533_62741_25290",
+          "path": "Seguro Novo › Tarefas e controle de Inatividade Seguros Novos"
+        }
+      ]
+    },
+    {
+      "id": "R05",
+      "pipeline": "Automóvel",
+      "stage": "Entrada do negócio",
+      "family": "Renovação (contato)",
+      "action": "➡️Nova Renovação - {=Document:CONTACT.NAME}{=Document:COMPANY.TITLE}",
+      "deadline": "10 dias úteis antes de Data Início de Vigência *",
+      "responsible": "RESPONSÁVEL_DO_NEGÓCIO",
+      "recreatedInLoop": false,
+      "loopCondition": null,
+      "conditionVariants": [
+        "Tipo de Seguro = RENOVAÇÃO DA PRÓPRIA CORRETORA"
+      ],
+      "configurations": 1,
+      "sources": [
+        {
+          "file": "bp-7",
+          "activity": "A56846_59033_36806_64554",
+          "path": "Renovação › Tarefas e Controle de Inatividade Renovações"
+        }
+      ]
+    },
+    {
+      "id": "R06",
+      "pipeline": "Automóvel",
+      "stage": "Enviar cotação",
+      "family": "Cotação (elaborar/enviar)",
+      "action": "Envie cotação deste cliente em até 24hrs",
+      "deadline": "1 dia útil",
+      "responsible": "RESPONSÁVEL_DO_NEGÓCIO",
+      "recreatedInLoop": true,
+      "loopCondition": "Enquanto etapa for = Elaborando cotação",
+      "conditionVariants": [
+        "Tipo de Seguro = SEGURO NOVO OU Tipo de Seguro = RENOVAÇÃO DE OUTRA CORRETORA E Tipo de Seguro = SEGURO NOVO",
+        "Tipo de Seguro = SEGURO NOVO OU Tipo de Seguro = RENOVAÇÃO DE OUTRA CORRETORA E Tipo de Seguro = RENOVAÇÃO DE OUTRA CORRETORA"
+      ],
+      "configurations": 2,
+      "sources": [
+        {
+          "file": "bp-85",
+          "activity": "A57640_32990_30141_57649",
+          "path": "NÃO › SEGURO NOVO / RENOVAÇÃO DE OUTRA CORRETORA › Etapa Elaborando Cotação › Controle de inatividade › Se = Seguro Novo › Enquanto etapa for = Elaborando cotação"
+        },
+        {
+          "file": "bp-85",
+          "activity": "A53715_29485_90359_72723",
+          "path": "NÃO › SEGURO NOVO / RENOVAÇÃO DE OUTRA CORRETORA › Etapa Elaborando Cotação › Controle de inatividade › Se = Renovação Externa › Enquanto etapa for = Elaborando cotação"
+        }
+      ]
+    },
+    {
+      "id": "R07",
+      "pipeline": "Automóvel",
+      "stage": "Enviar cotação",
+      "family": "Cotação (elaborar/enviar)",
+      "action": "Envie cotação deste cliente em até 48hrs",
+      "deadline": "2 dias úteis",
+      "responsible": "RESPONSÁVEL_DO_NEGÓCIO",
+      "recreatedInLoop": true,
+      "loopCondition": "Enquanto etapa for = Enviar Cotação",
+      "conditionVariants": [
+        "Tipo de Seguro = RENOVAÇÃO DA PRÓPRIA CORRETORA E Ramo de Seguro* = Automóvel",
+        "Tipo de Seguro = RENOVAÇÃO DA PRÓPRIA CORRETORA E senão (Outros Ramos)"
+      ],
+      "configurations": 2,
+      "sources": [
+        {
+          "file": "bp-85",
+          "activity": "A25004_4331_7051_90721",
+          "path": "NÃO › RENOVAÇÃO › Automações (Elaborando Cotação) › Automações Ativas › Automações Projacseg (TechStone) › Ajusta o titulo do card › Ramo = Seguro Auto › Controle de inatividade › Enquanto etapa for = Enviar Cotação"
+        },
+        {
+          "file": "bp-85",
+          "activity": "A31993_76129_92983_74015",
+          "path": "NÃO › RENOVAÇÃO › Automações (Elaborando Cotação) › Automações Ativas › Automações Projacseg (TechStone) › Ajusta o titulo do card › Outros Ramos › Controle de inatividade › Enquanto etapa for = Enviar Cotação"
+        }
+      ]
+    },
+    {
+      "id": "R08",
+      "pipeline": "Automóvel",
+      "stage": "Processo pendente",
+      "family": "Pendência",
+      "action": "O cliente {=Document:TITLE} está pendente!",
+      "deadline": "2 dias úteis",
+      "responsible": "RESPONSÁVEL_DO_NEGÓCIO",
+      "recreatedInLoop": false,
+      "loopCondition": null,
+      "conditionVariants": [
+        "sem condição"
+      ],
+      "configurations": 1,
+      "sources": [
+        {
+          "file": "bp-245",
+          "activity": "A12945_18603_79606_68376",
+          "path": "NÃO › Controle de Inatividade"
+        }
+      ]
+    },
+    {
+      "id": "R09",
+      "pipeline": "Automóvel",
+      "stage": "Proposta Transmitida/Em Emissão",
+      "family": "Emissão / acompanhamento de emissão",
+      "action": "Acompanhar e concluir a emissão do cliente - {=Document:TITLE}",
+      "deadline": "12 dias corridos",
+      "responsible": "USR-07",
+      "recreatedInLoop": false,
+      "loopCondition": null,
+      "conditionVariants": [
+        "Tipo de Seguro = SEGURO NOVO OU Tipo de Seguro = RENOVAÇÃO DE OUTRA CORRETORA E Ramo de Seguro* = Automóvel",
+        "Tipo de Seguro = RENOVAÇÃO DA PRÓPRIA CORRETORA E Ramo de Seguro* = Automóvel"
+      ],
+      "configurations": 2,
+      "sources": [
+        {
+          "file": "bp-75",
+          "activity": "A15354_2967_51127_12842",
+          "path": "NÃO › SEGURO NOVO / RENOVAÇÃO DE OUTRA CORRETORA › Etapa Proposta Transmitida/Em Emissão › Cria tarefa de acompanhamento de Emissão › Ramo = Seguro Auto"
+        },
+        {
+          "file": "bp-75",
+          "activity": "A24132_12924_6550_96873",
+          "path": "NÃO › RENOVAÇÃO › Automações (Proposta Transmitida) › Criar tarefa de Acompanhamento de Emissão › Automóvel"
+        }
+      ]
+    },
+    {
+      "id": "R10",
+      "pipeline": "Automóvel",
+      "stage": "Proposta Transmitida/Em Emissão",
+      "family": "Emissão / acompanhamento de emissão",
+      "action": "Acompanhar e concluir a emissão do cliente - {=Document:TITLE}",
+      "deadline": "15 dias corridos",
+      "responsible": "USR-07",
+      "recreatedInLoop": false,
+      "loopCondition": null,
+      "conditionVariants": [
+        "Tipo de Seguro = SEGURO NOVO OU Tipo de Seguro = RENOVAÇÃO DE OUTRA CORRETORA E senão (Outros Ramos)",
+        "Tipo de Seguro = RENOVAÇÃO DA PRÓPRIA CORRETORA E senão (Demais Ramos)"
+      ],
+      "configurations": 2,
+      "sources": [
+        {
+          "file": "bp-75",
+          "activity": "A12945_18603_79606_68376",
+          "path": "NÃO › SEGURO NOVO / RENOVAÇÃO DE OUTRA CORRETORA › Etapa Proposta Transmitida/Em Emissão › Cria tarefa de acompanhamento de Emissão › Outros Ramos"
+        },
+        {
+          "file": "bp-75",
+          "activity": "A4580_45406_67318_54649",
+          "path": "NÃO › RENOVAÇÃO › Automações (Proposta Transmitida) › Criar tarefa de Acompanhamento de Emissão › Demais Ramos"
+        }
+      ]
+    },
+    {
+      "id": "R11",
+      "pipeline": "Demais Ramos",
+      "stage": "Cotação enviada / Negociação",
+      "family": "Negociação / follow-up",
+      "action": "🆕Follow-up com o cliente: {=Document:CONTACT.NAME}🆕",
+      "deadline": "2 dias úteis",
+      "responsible": "RESPONSÁVEL_DO_NEGÓCIO",
+      "recreatedInLoop": true,
+      "loopCondition": "Enquanto Etapa = Cotação enviada / Negociação",
+      "conditionVariants": [
+        "Tipo de Pessoa = Pessoa Física",
+        "Tipo de Pessoa = Pessoa Jurídica"
+      ],
+      "configurations": 2,
+      "sources": [
+        {
+          "file": "bp-37",
+          "activity": "A66693_48394_99071_37895",
+          "path": "PF › Atribuição de Tarefas, Notificações e Controles de inativiadade › Enquanto Etapa = Cotação enviada / Negociação"
+        },
+        {
+          "file": "bp-37",
+          "activity": "A87230_86280_16137_50734",
+          "path": "PJ › Atribuição de Tarefas, Notificações e Controles de inativiadade › Enquanto Etapa = Cotação enviada / Negociação"
+        }
+      ]
+    },
+    {
+      "id": "R12",
+      "pipeline": "Demais Ramos",
+      "stage": "Elaborando Cotações",
+      "family": "Cotação (elaborar/enviar)",
+      "action": "🆕Elabore as cotações para o cliente: {=Document:CONTACT.NAME}🆕",
+      "deadline": "3 horas úteis",
+      "responsible": "RESPONSÁVEL_DO_NEGÓCIO",
+      "recreatedInLoop": false,
+      "loopCondition": null,
+      "conditionVariants": [
+        "Tipo de Seguro vazio E Tipo de Seguro = RENOVAÇÃO DA PRÓPRIA CORRETORA E Data Início de Vigência * preenchido",
+        "Tipo de Seguro vazio E Tipo de Seguro = RENOVAÇÃO DA PRÓPRIA CORRETORA E Data Início de Vigência * vazio",
+        "Tipo de Seguro vazio E Tipo de Seguro = SEGURO NOVO OU Tipo de Seguro = RENOVAÇÃO DE OUTRA CORRETORA",
+        "Tipo de Seguro = RENOVAÇÃO DA PRÓPRIA CORRETORA E Data Início de Vigência * preenchido",
+        "Tipo de Seguro = RENOVAÇÃO DA PRÓPRIA CORRETORA E Data Início de Vigência * vazio",
+        "Tipo de Seguro = SEGURO NOVO OU Tipo de Seguro = RENOVAÇÃO DE OUTRA CORRETORA"
+      ],
+      "configurations": 6,
+      "sources": [
+        {
+          "file": "bp-35",
+          "activity": "A40229_40352_53281_13720",
+          "path": "Atribuição de Tarefas, Notificações e Controles de inativiadade › TIPO DE SEGURO = VAZIO › RENOVAÇÃO › NÃO VAZIO"
+        },
+        {
+          "file": "bp-35",
+          "activity": "A64993_49619_78302_98566",
+          "path": "Atribuição de Tarefas, Notificações e Controles de inativiadade › TIPO DE SEGURO = VAZIO › RENOVAÇÃO › VAZIO"
+        },
+        {
+          "file": "bp-35",
+          "activity": "A66693_48394_99071_37895",
+          "path": "Atribuição de Tarefas, Notificações e Controles de inativiadade › TIPO DE SEGURO = VAZIO › SEGURO NOVO"
+        },
+        {
+          "file": "bp-35",
+          "activity": "A1370_52310_15041_41453",
+          "path": "Atribuição de Tarefas, Notificações e Controles de inativiadade › RENOVAÇÃO › NÃO VAZIO"
+        },
+        {
+          "file": "bp-35",
+          "activity": "A87719_44062_69489_20375",
+          "path": "Atribuição de Tarefas, Notificações e Controles de inativiadade › RENOVAÇÃO › VAZIO"
+        },
+        {
+          "file": "bp-35",
+          "activity": "A77807_2904_18092_79452",
+          "path": "Atribuição de Tarefas, Notificações e Controles de inativiadade › SEGURO NOVO"
+        }
+      ]
+    },
+    {
+      "id": "R13",
+      "pipeline": "Demais Ramos",
+      "stage": "Elaborando Cotações",
+      "family": "Preencher dados obrigatórios",
+      "action": "🆕Preencha o campo \"Tipo do Seguro\"🆕",
+      "deadline": "1 hora útil",
+      "responsible": "RESPONSÁVEL_DO_NEGÓCIO",
+      "recreatedInLoop": true,
+      "loopCondition": "Enquanto Campo Tipo de Seguro = Vazio",
+      "conditionVariants": [
+        "Tipo de Seguro vazio",
+        "Tipo de Seguro vazio E Tipo de Seguro = RENOVAÇÃO DA PRÓPRIA CORRETORA E Data Início de Vigência * vazio",
+        "Tipo de Seguro = RENOVAÇÃO DA PRÓPRIA CORRETORA E Data Início de Vigência * vazio"
+      ],
+      "configurations": 3,
+      "sources": [
+        {
+          "file": "bp-35",
+          "activity": "A39309_83884_30900_42850",
+          "path": "Atribuição de Tarefas, Notificações e Controles de inativiadade › TIPO DE SEGURO = VAZIO › Enquanto Campo Tipo de Seguro = Vazio"
+        },
+        {
+          "file": "bp-35",
+          "activity": "A72658_3766_59666_64491",
+          "path": "Atribuição de Tarefas, Notificações e Controles de inativiadade › TIPO DE SEGURO = VAZIO › RENOVAÇÃO › VAZIO › Enquanto Início de Vigência = Vazio"
+        },
+        {
+          "file": "bp-35",
+          "activity": "A11983_26046_54750_44062",
+          "path": "Atribuição de Tarefas, Notificações e Controles de inativiadade › RENOVAÇÃO › VAZIO › Enquanto Início de Vigência = Vazio"
+        }
+      ]
+    },
+    {
+      "id": "R14",
+      "pipeline": "Demais Ramos",
+      "stage": "Entrada do negócio",
+      "family": "Renovação (contato)",
+      "action": "🆕Faça contato com o cliente: {=Document:CONTACT.NAME}🆕",
+      "deadline": "15 dias úteis antes de Data Início de Vigência *",
+      "responsible": "RESPONSÁVEL_DO_NEGÓCIO",
+      "recreatedInLoop": false,
+      "loopCondition": null,
+      "conditionVariants": [
+        "Tipo de Pessoa = Pessoa Física E Tipo de Seguro vazio E Tipo de Seguro = RENOVAÇÃO DA PRÓPRIA CORRETORA E Data Início de Vigência * preenchido",
+        "Tipo de Pessoa = Pessoa Física E Tipo de Seguro vazio E Tipo de Seguro = RENOVAÇÃO DA PRÓPRIA CORRETORA E Data Início de Vigência * vazio",
+        "Tipo de Pessoa = Pessoa Física E Tipo de Seguro = RENOVAÇÃO DA PRÓPRIA CORRETORA E Data Início de Vigência * preenchido",
+        "Tipo de Pessoa = Pessoa Física E Tipo de Seguro = RENOVAÇÃO DA PRÓPRIA CORRETORA E Data Início de Vigência * vazio",
+        "Tipo de Pessoa = Pessoa Jurídica E Tipo de Seguro vazio E Tipo de Seguro = RENOVAÇÃO DA PRÓPRIA CORRETORA E Data Início de Vigência * preenchido",
+        "Tipo de Pessoa = Pessoa Jurídica E Tipo de Seguro vazio E Tipo de Seguro = RENOVAÇÃO DA PRÓPRIA CORRETORA E Data Início de Vigência * vazio",
+        "Tipo de Pessoa = Pessoa Jurídica E Tipo de Seguro = RENOVAÇÃO DA PRÓPRIA CORRETORA E Data Início de Vigência * preenchido",
+        "Tipo de Pessoa = Pessoa Jurídica E Tipo de Seguro = RENOVAÇÃO DA PRÓPRIA CORRETORA E Data Início de Vigência * vazio"
+      ],
+      "configurations": 8,
+      "sources": [
+        {
+          "file": "bp-29",
+          "activity": "A54753_66193_7993_74150",
+          "path": "Atribuição de Tarefas, Notificações e Controles de inativiadade › PF › TIPO DE SEGURO = VAZIO › RENOVAÇÃO › NÃO VAZIO"
+        },
+        {
+          "file": "bp-29",
+          "activity": "A52559_92835_18234_1738",
+          "path": "Atribuição de Tarefas, Notificações e Controles de inativiadade › PF › TIPO DE SEGURO = VAZIO › RENOVAÇÃO › VAZIO"
+        },
+        {
+          "file": "bp-29",
+          "activity": "A76360_18031_33508_66794",
+          "path": "Atribuição de Tarefas, Notificações e Controles de inativiadade › PF › RENOVAÇÃO › NÃO VAZIO"
+        },
+        {
+          "file": "bp-29",
+          "activity": "A37148_85385_50858_78089",
+          "path": "Atribuição de Tarefas, Notificações e Controles de inativiadade › PF › RENOVAÇÃO › VAZIO"
+        },
+        {
+          "file": "bp-29",
+          "activity": "A2834_19140_61527_46611",
+          "path": "Atribuição de Tarefas, Notificações e Controles de inativiadade › PJ › TIPO DE SEGURO = VAZIO › RENOVAÇÃO › NÃO VAZIO"
+        },
+        {
+          "file": "bp-29",
+          "activity": "A99881_19766_81175_41291",
+          "path": "Atribuição de Tarefas, Notificações e Controles de inativiadade › PJ › TIPO DE SEGURO = VAZIO › RENOVAÇÃO › VAZIO"
+        },
+        {
+          "file": "bp-29",
+          "activity": "A61978_40032_40788_68340",
+          "path": "Atribuição de Tarefas, Notificações e Controles de inativiadade › PJ › RENOVAÇÃO › NÃO VAZIO"
+        },
+        {
+          "file": "bp-29",
+          "activity": "A55207_22417_87688_98429",
+          "path": "Atribuição de Tarefas, Notificações e Controles de inativiadade › PJ › RENOVAÇÃO › VAZIO"
+        }
+      ]
+    },
+    {
+      "id": "R15",
+      "pipeline": "Demais Ramos",
+      "stage": "Entrada do negócio",
+      "family": "Novo negócio (primeiro contato)",
+      "action": "🆕Faça contato com o cliente: {=Document:CONTACT.NAME}🆕",
+      "deadline": "1 hora útil",
+      "responsible": "RESPONSÁVEL_DO_NEGÓCIO",
+      "recreatedInLoop": false,
+      "loopCondition": null,
+      "conditionVariants": [
+        "Tipo de Pessoa = Pessoa Física E Tipo de Seguro vazio E Tipo de Seguro = SEGURO NOVO OU Tipo de Seguro = RENOVAÇÃO DE OUTRA CORRETORA",
+        "Tipo de Pessoa = Pessoa Física E Tipo de Seguro = SEGURO NOVO OU Tipo de Seguro = RENOVAÇÃO DE OUTRA CORRETORA",
+        "Tipo de Pessoa = Pessoa Jurídica E Tipo de Seguro vazio E Tipo de Seguro = SEGURO NOVO OU Tipo de Seguro = RENOVAÇÃO DE OUTRA CORRETORA",
+        "Tipo de Pessoa = Pessoa Jurídica E Tipo de Seguro = SEGURO NOVO OU Tipo de Seguro = RENOVAÇÃO DE OUTRA CORRETORA"
+      ],
+      "configurations": 4,
+      "sources": [
+        {
+          "file": "bp-29",
+          "activity": "A66869_35844_44941_117",
+          "path": "Atribuição de Tarefas, Notificações e Controles de inativiadade › PF › TIPO DE SEGURO = VAZIO › SEGURO NOVO"
+        },
+        {
+          "file": "bp-29",
+          "activity": "A32990_25872_86634_40007",
+          "path": "Atribuição de Tarefas, Notificações e Controles de inativiadade › PF › SEGURO NOVO"
+        },
+        {
+          "file": "bp-29",
+          "activity": "A46721_34681_27098_42772",
+          "path": "Atribuição de Tarefas, Notificações e Controles de inativiadade › PJ › TIPO DE SEGURO = VAZIO › SEGURO NOVO"
+        },
+        {
+          "file": "bp-29",
+          "activity": "A25244_63203_46528_55978",
+          "path": "Atribuição de Tarefas, Notificações e Controles de inativiadade › PJ › SEGURO NOVO"
+        }
+      ]
+    },
+    {
+      "id": "R16",
+      "pipeline": "Demais Ramos",
+      "stage": "Entrada do negócio",
+      "family": "Preencher dados obrigatórios",
+      "action": "🆕Preencha o campo \"Tipo de Pessoa\"🆕",
+      "deadline": "1 hora útil",
+      "responsible": "RESPONSÁVEL_DO_NEGÓCIO",
+      "recreatedInLoop": true,
+      "loopCondition": "Enquanto Tipo de Pessoa = VAZIO",
+      "conditionVariants": [
+        "Tipo de Pessoa vazio"
+      ],
+      "configurations": 1,
+      "sources": [
+        {
+          "file": "bp-29",
+          "activity": "A89514_32610_18047_70714",
+          "path": "Ajusta Titulo do Card › SE Tipo de Pessoa = Vazio › Enquanto Tipo de Pessoa = VAZIO"
+        }
+      ]
+    },
+    {
+      "id": "R17",
+      "pipeline": "Demais Ramos",
+      "stage": "Entrada do negócio",
+      "family": "Preencher dados obrigatórios",
+      "action": "🆕Preencha o campo \"Tipo do Seguro\"🆕",
+      "deadline": "1 hora útil",
+      "responsible": "RESPONSÁVEL_DO_NEGÓCIO",
+      "recreatedInLoop": true,
+      "loopCondition": "Enquanto Campo Tipo de Seguro = Vazio",
+      "conditionVariants": [
+        "Tipo de Pessoa = Pessoa Física E Tipo de Seguro vazio",
+        "Tipo de Pessoa = Pessoa Física E Tipo de Seguro vazio E Tipo de Seguro = RENOVAÇÃO DA PRÓPRIA CORRETORA E Data Início de Vigência * vazio",
+        "Tipo de Pessoa = Pessoa Física E Tipo de Seguro = RENOVAÇÃO DA PRÓPRIA CORRETORA E Data Início de Vigência * vazio",
+        "Tipo de Pessoa = Pessoa Jurídica E Tipo de Seguro vazio",
+        "Tipo de Pessoa = Pessoa Jurídica E Tipo de Seguro vazio E Tipo de Seguro = RENOVAÇÃO DA PRÓPRIA CORRETORA E Data Início de Vigência * vazio",
+        "Tipo de Pessoa = Pessoa Jurídica E Tipo de Seguro = RENOVAÇÃO DA PRÓPRIA CORRETORA E Data Início de Vigência * vazio"
+      ],
+      "configurations": 6,
+      "sources": [
+        {
+          "file": "bp-29",
+          "activity": "A57055_48778_96297_47336",
+          "path": "Atribuição de Tarefas, Notificações e Controles de inativiadade › PF › TIPO DE SEGURO = VAZIO › Enquanto Campo Tipo de Seguro = Vazio"
+        },
+        {
+          "file": "bp-29",
+          "activity": "A98047_31913_22229_48318",
+          "path": "Atribuição de Tarefas, Notificações e Controles de inativiadade › PF › TIPO DE SEGURO = VAZIO › RENOVAÇÃO › VAZIO › Enquanto Início de Vigência = Vazio"
+        },
+        {
+          "file": "bp-29",
+          "activity": "A90158_37065_67136_53963",
+          "path": "Atribuição de Tarefas, Notificações e Controles de inativiadade › PF › RENOVAÇÃO › VAZIO › Enquanto Início de Vigência = Vazio"
+        },
+        {
+          "file": "bp-29",
+          "activity": "A66945_85491_19211_92906",
+          "path": "Atribuição de Tarefas, Notificações e Controles de inativiadade › PJ › TIPO DE SEGURO = VAZIO › Enquanto Campo Tipo de Seguro = Vazio"
+        },
+        {
+          "file": "bp-29",
+          "activity": "A66910_61514_98067_14894",
+          "path": "Atribuição de Tarefas, Notificações e Controles de inativiadade › PJ › TIPO DE SEGURO = VAZIO › RENOVAÇÃO › VAZIO › Enquanto Início de Vigência = Vazio"
+        },
+        {
+          "file": "bp-29",
+          "activity": "A88444_52596_39675_41775",
+          "path": "Atribuição de Tarefas, Notificações e Controles de inativiadade › PJ › RENOVAÇÃO › VAZIO › Enquanto Início de Vigência = Vazio"
+        }
+      ]
+    },
+    {
+      "id": "R18",
+      "pipeline": "Demais Ramos",
+      "stage": "Proposta Pendente",
+      "family": "Pendência",
+      "action": "🆕Acompanhe a pendencia gerada para o cliente: {=Document:UF_CRM_1725500605}🆕",
+      "deadline": "2 dias úteis",
+      "responsible": "RESPONSÁVEL_DO_NEGÓCIO",
+      "recreatedInLoop": true,
+      "loopCondition": "Enquanto Etapa = Processo Perdido",
+      "conditionVariants": [
+        "sem condição"
+      ],
+      "configurations": 1,
+      "sources": [
+        {
+          "file": "bp-39",
+          "activity": "A77106_98271_43304_39996",
+          "path": "Enquanto Etapa = Processo Perdido"
+        }
+      ]
+    },
+    {
+      "id": "R19",
+      "pipeline": "Demais Ramos",
+      "stage": "Transmissão/Em Emissão",
+      "family": "Emissão / acompanhamento de emissão",
+      "action": "🆕Realize o acompanhamento da emissão da proposta: {=Document:UF_CRM_1725500605}🆕",
+      "deadline": "15 dias úteis",
+      "responsible": "USR-07",
+      "recreatedInLoop": false,
+      "loopCondition": null,
+      "conditionVariants": [
+        "Tipo de Pessoa = Pessoa Física E Forma de pagamento* = Boleto Bancário",
+        "Tipo de Pessoa = Pessoa Física E senão (Outras Formas de Pagamento.)",
+        "Tipo de Pessoa = Pessoa Jurídica E Forma de pagamento* = Boleto Bancário"
+      ],
+      "configurations": 3,
+      "sources": [
+        {
+          "file": "bp-41",
+          "activity": "A3073_38071_50855_98010",
+          "path": "NÃO › Atribuição de Tarefas, Notificações e Controles de inativiadade › PF › Forma de Pagamento = Boleto"
+        },
+        {
+          "file": "bp-41",
+          "activity": "A62863_35731_1900_83831",
+          "path": "NÃO › Atribuição de Tarefas, Notificações e Controles de inativiadade › PF › Outras Formas de Pagamento."
+        },
+        {
+          "file": "bp-41",
+          "activity": "A45013_56850_94152_18905",
+          "path": "NÃO › Atribuição de Tarefas, Notificações e Controles de inativiadade › PJ › Forma de Pagamento = Boleto"
+        }
+      ]
+    },
+    {
+      "id": "R20",
+      "pipeline": "Demais Ramos",
+      "stage": "Transmissão/Em Emissão",
+      "family": "Emissão / acompanhamento de emissão",
+      "action": "🆕Realize o acompanhamento da emissão da proposta: {=Document:UF_CRM_1725500605}🆕",
+      "deadline": "3 dias úteis",
+      "responsible": "USR-07",
+      "recreatedInLoop": false,
+      "loopCondition": null,
+      "conditionVariants": [
+        "Tipo de Pessoa = Pessoa Jurídica E senão (Outras Formas de Pagamento.)"
+      ],
+      "configurations": 1,
+      "sources": [
+        {
+          "file": "bp-41",
+          "activity": "A26261_99926_695_67138",
+          "path": "NÃO › Atribuição de Tarefas, Notificações e Controles de inativiadade › PJ › Outras Formas de Pagamento."
+        }
+      ]
+    },
+    {
+      "id": "R21",
+      "pipeline": "Demais Ramos",
+      "stage": "Transmissão/Em Emissão",
+      "family": "Cadastro no Teleport",
+      "action": "🆕Realize o cadastro do negócio no Teleport {=Document:UF_CRM_1725500605}🆕",
+      "deadline": "30 minutos úteis",
+      "responsible": "RESPONSÁVEL_DO_NEGÓCIO",
+      "recreatedInLoop": true,
+      "loopCondition": "Enquanto Número do Calculo Vazio",
+      "conditionVariants": [
+        "Tipo de Pessoa = Pessoa Física",
+        "Tipo de Pessoa = Pessoa Física E Numero do calculo* vazio",
+        "Tipo de Pessoa = Pessoa Jurídica E Numero do calculo* vazio"
+      ],
+      "configurations": 3,
+      "sources": [
+        {
+          "file": "bp-41",
+          "activity": "A66693_48394_99071_37895",
+          "path": "NÃO › Atribuição de Tarefas, Notificações e Controles de inativiadade › PF"
+        },
+        {
+          "file": "bp-41",
+          "activity": "A49155_31040_72246_81807",
+          "path": "NÃO › Atribuição de Tarefas, Notificações e Controles de inativiadade › PF › = VAZIO › Enquanto Número do Calculo Vazio"
+        },
+        {
+          "file": "bp-41",
+          "activity": "A12877_24834_23865_63942",
+          "path": "NÃO › Atribuição de Tarefas, Notificações e Controles de inativiadade › PJ › = VAZIO › Enquanto Número do Calculo Vazio"
+        }
+      ]
+    },
+    {
+      "id": "R22",
+      "pipeline": "Demais Ramos",
+      "stage": "Transmissão/Em Emissão",
+      "family": "Cadastro no Teleport",
+      "action": "🆕Realize o cadastro no Teleport da proposta {=Document:UF_CRM_1725500605}🆕",
+      "deadline": "30 minutos úteis",
+      "responsible": "RESPONSÁVEL_DO_NEGÓCIO",
+      "recreatedInLoop": false,
+      "loopCondition": null,
+      "conditionVariants": [
+        "Tipo de Pessoa = Pessoa Jurídica"
+      ],
+      "configurations": 1,
+      "sources": [
+        {
+          "file": "bp-41",
+          "activity": "A12762_30527_83133_46226",
+          "path": "NÃO › Atribuição de Tarefas, Notificações e Controles de inativiadade › PJ"
+        }
+      ]
+    },
+    {
+      "id": "R23",
+      "pipeline": "Demais Ramos",
+      "stage": "Transmissão/Em Emissão",
+      "family": "Envio de boleto",
+      "action": "🆕Realize o envio do boleto para o cliente: {=Document:CONTACT.NAME}🆕",
+      "deadline": "3 dias úteis",
+      "responsible": "RESPONSÁVEL_DO_NEGÓCIO",
+      "recreatedInLoop": false,
+      "loopCondition": null,
+      "conditionVariants": [
+        "Tipo de Pessoa = Pessoa Física E Forma de pagamento* = Boleto Bancário"
+      ],
+      "configurations": 1,
+      "sources": [
+        {
+          "file": "bp-41",
+          "activity": "A7303_93194_3021_88554",
+          "path": "NÃO › Atribuição de Tarefas, Notificações e Controles de inativiadade › PF › Forma de Pagamento = Boleto"
+        }
+      ]
+    },
+    {
+      "id": "R24",
+      "pipeline": "Demais Ramos",
+      "stage": "Transmissão/Em Emissão",
+      "family": "Envio de boleto",
+      "action": "🆕Realize o envio do boleto para o cliente: {=Document:CONTACT.NAME}🆕",
+      "deadline": "30 minutos úteis",
+      "responsible": "RESPONSÁVEL_DO_NEGÓCIO",
+      "recreatedInLoop": false,
+      "loopCondition": null,
+      "conditionVariants": [
+        "Tipo de Pessoa = Pessoa Jurídica E Forma de pagamento* = Boleto Bancário"
+      ],
+      "configurations": 1,
+      "sources": [
+        {
+          "file": "bp-41",
+          "activity": "A47329_56896_4451_56209",
+          "path": "NÃO › Atribuição de Tarefas, Notificações e Controles de inativiadade › PJ › Forma de Pagamento = Boleto"
+        }
+      ]
+    }
+  ]
+}

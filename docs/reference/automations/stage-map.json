@@ -1,0 +1,107 @@
+{
+  "bp-7": {
+    "pipeline": "Automóvel",
+    "stage": "Entrada do negócio",
+    "stageCode": "NEW",
+    "confidence": "alta",
+    "evidence": "Bloco 'Etapa Entrada do Negócio'; move o negócio para 'Enviar cotação'"
+  },
+  "bp-85": {
+    "pipeline": "Automóvel",
+    "stage": "Enviar cotação",
+    "stageCode": "UC_YI2RCB",
+    "confidence": "alta",
+    "evidence": "Encerra tarefas de 'Entrada do negócio'; laços 'Enquanto etapa = Enviar Cotação'"
+  },
+  "bp-71": {
+    "pipeline": "Automóvel",
+    "stage": "Cotação enviada / Negociação",
+    "stageCode": "UC_IYS6WC",
+    "confidence": "alta",
+    "evidence": "Encerra tarefas de 'Entrada' e 'Enviar cotação'; laços 'Enquanto etapa = Cotação enviada/Negociação'"
+  },
+  "bp-75": {
+    "pipeline": "Automóvel",
+    "stage": "Proposta Transmitida/Em Emissão",
+    "stageCode": "UC_25DQ2X",
+    "confidence": "alta",
+    "evidence": "Bloco 'Etapa Proposta Transmitida/Em Emissão'; encerra tarefas das três etapas anteriores"
+  },
+  "bp-245": {
+    "pipeline": "Automóvel",
+    "stage": "Processo pendente",
+    "stageCode": "UC_LJGF76",
+    "confidence": "média",
+    "evidence": "Encerra tarefas até 'Proposta Transmitida'; tarefa 'Emissão com Pendência'"
+  },
+  "bp-79": {
+    "pipeline": "Automóvel",
+    "stage": "Concluído",
+    "stageCode": "WON",
+    "confidence": "alta",
+    "evidence": "Bloco 'Etapa Concluído'; encerra tarefas de todas as etapas abertas do Automóvel"
+  },
+  "bp-9": {
+    "pipeline": "Automóvel",
+    "stage": "Processos Perdidos",
+    "stageCode": "LOSE",
+    "confidence": "alta",
+    "evidence": "Bloco 'Etapa Processos Perdidos'; encerra tarefas de todas as etapas do Automóvel"
+  },
+  "bp-29": {
+    "pipeline": "Demais Ramos",
+    "stage": "Entrada do negócio",
+    "stageCode": "C1:NEW",
+    "confidence": "alta",
+    "evidence": "Bloco 'Etapa Entrada do Negócio'; move o negócio para 'Elaborando Cotações'"
+  },
+  "bp-35": {
+    "pipeline": "Demais Ramos",
+    "stage": "Elaborando Cotações",
+    "stageCode": "C1:EXECUTING",
+    "confidence": "alta",
+    "evidence": "Bloco 'Etapa Elaborando Cotação'; encerra tarefas de 'Entrada'; move para 'Cotação enviada'"
+  },
+  "bp-37": {
+    "pipeline": "Demais Ramos",
+    "stage": "Cotação enviada / Negociação",
+    "stageCode": "C1:UC_YDJH2K",
+    "confidence": "alta",
+    "evidence": "Encerra tarefas de 'Entrada' e 'Elaborando'; laço 'Enquanto Etapa = Cotação enviada'"
+  },
+  "bp-41": {
+    "pipeline": "Demais Ramos",
+    "stage": "Transmissão/Em Emissão",
+    "stageCode": "C1:UC_N0RIBP",
+    "confidence": "alta",
+    "evidence": "Encerra tarefas das três etapas anteriores; move para 'Proposta Pendente'"
+  },
+  "bp-39": {
+    "pipeline": "Demais Ramos",
+    "stage": "Proposta Pendente",
+    "stageCode": "C1:FINAL_INVOICE",
+    "confidence": "média",
+    "evidence": "Encerra tarefas de 'Transmissão/Em Emissão'; tarefa 'Proposta Pendente'"
+  },
+  "bp-45": {
+    "pipeline": "Demais Ramos",
+    "stage": "Emitidos",
+    "stageCode": "C1:WON",
+    "confidence": "alta",
+    "evidence": "Bloco 'Etapa Concluído'; encerra tarefas de todas as etapas abertas do Demais Ramos"
+  },
+  "bp-47": {
+    "pipeline": "Demais Ramos",
+    "stage": "Perdidos (a confirmar)",
+    "stageCode": "C1:LOSE?",
+    "confidence": "a confirmar",
+    "evidence": "Bloco 'Automações (Processos Perdidos)'; sem tarefas nem referência explícita de etapa"
+  },
+  "bp-285": {
+    "pipeline": "Automóvel?",
+    "stage": "Prospecção ou Perdidos (a confirmar)",
+    "stageCode": "UC_130IYL?",
+    "confidence": "a confirmar",
+    "evidence": "Bloco 'Automações (Processos Perdidos)'; sem tarefas; restam Prospecção (Automóvel) e Perdidos"
+  }
+}

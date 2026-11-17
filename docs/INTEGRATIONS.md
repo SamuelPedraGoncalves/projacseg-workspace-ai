@@ -74,6 +74,18 @@ Contratos em `apps/api/src/integrations/bitrix24/` (`types.ts` e `ports.ts`).
 - Nenhuma automação existente é alterada ou desativada.
 - Uso do dashboard como página inicial automática no Bitrix24: **a homologar**.
 
+## Avisos da pesquisa de 16/11/2026
+
+- **Chatbots:** o backend usa `imbot` v1, oficialmente descontinuado. Migrar para `imbot.v2`
+  (`Bot.register` com `code` escolhido e idempotente, eventos `ONIMBOTV2*` por `fetch` ou webhook,
+  verificação por `auth.application_token`, 2 requisições/s por app, REST só em planos comerciais).
+- **Alaio Vibecode:** plataforma oficial de apps do ecossistema Bitrix24 (API keys, auth keys, AI Router,
+  servidores Black Hole, Hermes gerenciado, créditos). Avaliação em [HERMES_EVALUATION.md](HERMES_EVALUATION.md).
+- **Teleport:** os modelos de automação mostram tarefas de cadastro no Teleport e laços à espera do
+  "Número do cálculo"; a integração Teleport ↔ Bitrix24 não aparece nos modelos. Antes de qualquer
+  integração direta, analisar payloads e documentação existentes (eventos AUTO_GRAVA, EMISSAO,
+  ERROEMISSAO, a confirmar). O Workspace consome primeiro os dados já integrados ao Bitrix24.
+
 ## LLM — status: **não iniciado**
 
 O assistente conversa pelo **chat do Bitrix24** (bot `imbot`). As mensagens chegam ao backend pelo

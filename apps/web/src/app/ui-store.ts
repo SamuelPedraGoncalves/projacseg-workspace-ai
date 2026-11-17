@@ -1,7 +1,7 @@
 import { create } from "zustand";
 
 /** O que o diálogo do assistente mostra quando o chat do Bitrix24 não pôde ser aberto. */
-export type AssistantFallback = "demo" | "not-installed";
+export type AssistantFallback = "demo" | "not-installed" | "unavailable";
 
 /** Estado de interface que atravessa componentes: diálogos abertos. */
 interface UiState {

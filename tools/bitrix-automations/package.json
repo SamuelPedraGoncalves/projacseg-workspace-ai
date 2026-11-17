@@ -1,0 +1,21 @@
+{
+  "name": "@projacseg/bitrix-automations",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Leitura segura de modelos de automação exportados do Bitrix24 (.bpt): inventário, catálogo de regras, escalonamentos e dependências. Somente leitura.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "analyze": "tsx src/cli.ts",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.3",
+    "vitest": "^5.1.0"
+  }
+}

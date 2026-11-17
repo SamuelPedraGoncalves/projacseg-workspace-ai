@@ -11,6 +11,9 @@ Instruções para o Claude Code (e qualquer agente) neste repositório. Leia tam
    - `docs/DESIGN_SYSTEM.md` — tokens, motor de temas, o que muda e o que não muda de cor.
    - `docs/INTEGRATIONS.md` e `docs/SECURITY.md` — antes de tocar em Bitrix24, LLM, tokens ou dados.
    - `docs/DECISIONS.md` — decisões já tomadas (não reabra sem motivo).
+   - `docs/BITRIX24_AUTOMATIONS.md`, `docs/OPERATIONAL_ENGINE.md`, `docs/AI_INTEGRATION.md`,
+     `docs/HERMES_EVALUATION.md` — automações atuais, motor, IA e avaliação do Hermes.
+   - Métodos do Bitrix24: consulte o MCP `bitrix24-docs` (`.mcp.json`).
 2. Confira `docs/ROADMAP.md` para não antecipar etapas fora do escopo da sprint.
 
 ## Ao terminar
@@ -29,6 +32,8 @@ Instruções para o Claude Code (e qualquer agente) neste repositório. Leia tam
 - Multiempresa: tudo escopado por `tenantId`. Nada de IDs de usuários, pipelines ou campos fixos em código.
 - Sem tokens no frontend, sem credenciais no Git (use `.env.example`), sem dados reais de segurados.
 - Respostas simuladas nunca podem parecer produzidas por uma IA conectada.
+- Exportações do cliente (`.bpt` e afins) ficam em `data/private/` e nunca vão para o Git.
+- Não faça commit de alterações relevantes não revisadas sem autorização expressa.
 
 ## Comandos
 

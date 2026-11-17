@@ -19,9 +19,10 @@ export type PlatformMode = "demo" | "bitrix24";
  * Resultado de "abrir o assistente":
  * - `opened`: o chat do assistente foi aberto no messenger do Bitrix24;
  * - `not-installed`: dentro do Bitrix24, mas o bot do assistente não está registrado no portal;
+ * - `unavailable`: dentro do Bitrix24, mas a consulta ao portal falhou (rede, permissão, erro da API);
  * - `demo`: fora do Bitrix24 — a interface mostra o chat demonstrativo.
  */
-export type AssistantOpenResult = "opened" | "not-installed" | "demo";
+export type AssistantOpenResult = "opened" | "not-installed" | "unavailable" | "demo";
 
 export interface Platform {
   mode: PlatformMode;
@@ -75,7 +76,7 @@ export function createBitrix24Platform(
         return (await host.openAssistantChat(ASSISTANT_BOT_CODE)) ? "opened" : "not-installed";
       } catch (error) {
         console.warn("Não foi possível abrir o chat do assistente no Bitrix24.", error);
-        return "not-installed";
+        return "unavailable";
       }
     },
     installer: {

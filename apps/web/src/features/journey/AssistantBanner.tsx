@@ -1,10 +1,17 @@
 import { ArrowRight, Sparkles } from "lucide-react";
+import { usePlatform } from "../../platform/platform-context";
 import { useWorkspaceActions } from "../../platform/use-workspace-actions";
 import { useBriefing } from "../deals/queries";
 
 export function AssistantBanner() {
   const { data: briefing } = useBriefing();
   const { openAssistant } = useWorkspaceActions();
+  const { mode, journey } = usePlatform();
+  // Dentro de um portal real, o resumo fictício da demonstração nunca é exibido.
+  const text =
+    mode === "bitrix24" && journey.source === "demo"
+      ? "Seus negócios aparecerão aqui assim que o Workspace for instalado no servidor deste portal."
+      : (briefing ?? "Carregando suas prioridades…");
 
   return (
     <section
@@ -20,7 +27,7 @@ export function AssistantBanner() {
         Seu assistente Projacseg
       </h2>
       <p className="mb-5 max-w-[850px] text-[clamp(14px,1.15vw,18px)] leading-[1.55] max-[650px]:text-[13px]">
-        {briefing ?? "Carregando suas prioridades…"}
+        {text}
       </p>
       <button
         type="button"

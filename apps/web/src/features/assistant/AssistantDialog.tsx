@@ -27,6 +27,16 @@ interface AssistantDialogContentProps {
  * registrado, o assistente abre direto no messenger do portal e este diálogo não aparece.
  */
 export function AssistantDialogContent({ userName, fallback }: AssistantDialogContentProps) {
+  if (fallback === "unavailable") {
+    return (
+      <DialogContent title="Assistente Projacseg" description="Chat do Bitrix24 indisponível.">
+        <p className="rounded-xl bg-(--theme-surface) p-4 text-[13px] leading-[1.6]">
+          Não foi possível abrir o chat do assistente agora. Tente novamente em alguns minutos; se
+          continuar, avise o administrador do portal.
+        </p>
+      </DialogContent>
+    );
+  }
   if (fallback === "not-installed") {
     return (
       <DialogContent title="Assistente Projacseg" description="Chat do Bitrix24 indisponível.">

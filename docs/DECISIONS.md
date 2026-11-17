@@ -159,3 +159,49 @@ negócios viram "Negócio #ID" antes de sair do servidor e são recolocados na r
 Sem Docker disponível na máquina de desenvolvimento, o armazenamento Prisma é testado contra o PGlite
 (PostgreSQL em WebAssembly servido pelo protocolo de rede), aplicando a migração versionada. O teste
 encontrou um bug real que a versão em memória não acusava.
+
+## D-030 — Analisador de BPT seguro, testado e reprodutível
+
+`tools/bitrix-automations` (pacote do workspace) lê `.bpt` sem executar nada: leitor de PHP
+`serialize` que recusa objetos, referências e enums, sem protótipo, com limites de profundidade,
+tamanho e descompressão. Os relatórios são gerados, nunca editados à mão.
+
+## D-031 — Originais do cliente fora do Git; material versionado anonimizado
+
+Exportações, lista de nomes a anonimizar e mapa de pseudônimos ficam em `data/private/` (ignorado).
+O versionado usa `USR-xx` e `HOST-xx`, sem URLs, e-mails, telefones, documentos ou nomes.
+
+## D-032 — Regras contadas de três formas
+
+Configurações (75 habilitadas / 57 em produção), tarefas geradas em execução (maiores, por causa dos
+laços) e regras consolidadas (24 estritas). O número 26 do levantamento fica como "a comparar" até
+recebermos a lista original.
+
+## D-033 — Migrar o bot para `imbot.v2`
+
+A documentação oficial declara `imbot.*` (v1) descontinuado ("development halted") e recomenda
+`imbot.v2` para desenvolvimento novo. O backend atual usa v1; a migração entra na próxima sprint.
+O código lógico `projacseg_assistant` continua; o ID numérico nunca é fixo.
+
+## D-034 — Hermes: avaliação antes de decisão
+
+Pela documentação oficial, o Hermes gerenciado atende por padrão só o criador, com as permissões
+dele, sem API para criar agentes e sem ferramentas próprias documentadas. Não é adotado como base até
+uma PoC em portal de desenvolvimento. Recomendação preliminar: arquitetura híbrida
+([HERMES_EVALUATION.md](HERMES_EVALUATION.md)).
+
+## D-035 — MCP de documentação do Bitrix24 no escopo do projeto
+
+`@bitrix24/mcp-docs` (oficial, sem chave) configurado em `.mcp.json`. O MCP operacional
+(`@bitrix24/mcp-vibecode-api`) só com autorização, chave de portal de desenvolvimento e nunca em
+produção.
+
+## D-036 — Sem RAG por enquanto
+
+A base de conhecimento é a documentação versionada e a busca textual. Banco vetorial só quando houver
+necessidade comprovada.
+
+## D-037 — Portal real nunca mostra conteúdo fictício
+
+Dentro do Bitrix24, negócios demonstrativos não abrem card, o banner não exibe o resumo de
+demonstração e o assistente distingue "não instalado" de "indisponível".

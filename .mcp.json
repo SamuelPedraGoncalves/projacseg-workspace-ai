@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "bitrix24-docs": {
+      "type": "stdio",
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "@bitrix24/mcp-docs"],
+      "env": {}
+    }
+  }
+}

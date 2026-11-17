@@ -2,58 +2,58 @@
 
 ## Contexto
 
-A ProjacSeg opera sua área comercial de seguros no Bitrix24, com dois pipelines principais:
-**Automóvel** e **Demais Ramos**. O levantamento operacional anterior identificou **75 configurações
-habilitadas de criação de tarefas**, agrupadas em **26 regras operacionais propostas** — números a
-serem homologados com os arquivos originais das automações.
+A ProjacSeg opera sua área comercial e técnica de seguros no Bitrix24, com dois pipelines
+principais: **Automóvel** e **Demais Ramos** (há também Benefícios/Saúde, fora do escopo inicial). O
+Teleport já é integrado ao Bitrix24.
 
-O excesso de tarefas gera sobrecarga, dificulta a priorização e cria resistência ao uso do CRM.
+A análise das automações exportadas confirmou **75 configurações habilitadas de criação de
+tarefas** (57 em produção), consolidadas em **24 regras** estritas (o levantamento anterior falava em
+26). 24 robôs recriam tarefas em laço, a provável origem da sobrecarga. Ver
+[BITRIX24_AUTOMATIONS.md](BITRIX24_AUTOMATIONS.md).
 
 ## Objetivo
 
-Transformar o Bitrix24 em uma plataforma de assistência operacional inteligente que organiza o
-trabalho de cada colaborador, monitora os processos, identifica atrasos, auxilia o colaborador e
-escalona automaticamente descumprimentos aos superiores.
+Transformar o Bitrix24 numa plataforma de assistência operacional: organizar as obrigações de cada
+colaborador, monitorar processos, identificar atrasos, escalonar automaticamente e dar controle à
+gestão — sem substituir o Bitrix24 e sem aumentar a burocracia.
 
-## Estado atual (16/11/2026)
+## Legenda de status
 
-### Implementado e testado (sem homologação em portal real)
+**Implementado** (código existe) · **Testado localmente** (testes automatizados com mocks/PGlite) ·
+**Homologado** (validado com a ProjacSeg em portal) · **Planejado** · **Bloqueado** (depende de
+terceiros) · **Aguardando validação**.
 
-- **Dashboard Minha Jornada** fiel à referência, com temas por colaborador, filtros por URL,
-  responsividade e acessibilidade.
-- **Motor de regras determinístico** (`packages/engine`): prazos em dias/horas úteis com feriados,
-  risco, atraso, escalonamento em níveis, resolução só quando o negócio avança; projeção do dashboard e
-  resumo de prioridades — tudo sem IA.
-- **Backend** (`apps/api`): instalação do aplicativo com tokens criptografados, sessão assinada do
-  colaborador, leitura do CRM (negócios, pipelines, etapas, campos de lista, usuários, departamentos),
-  eventos de negócios em tempo real, sincronização completa periódica, histórico auditável (somente
-  inserção) e PostgreSQL via Prisma.
-- **Comunicação ativa pelo bot** no chat do Bitrix24: alerta de risco, aviso de atraso, aviso ao
-  superior no escalonamento e resumo diário, sem mensagens duplicadas.
-- **Assistente de IA** no chat (Claude, opcional e desligado por padrão): responde usando os dados do
-  motor; não altera prazos nem escalonamentos; por padrão não envia nomes de segurados à IA.
-- **Dashboard com dados reais** dentro do Bitrix24, atualizado a cada minuto; demonstração fora dele.
+Nada neste repositório está **homologado** até agora.
 
-### Depende de terceiros para funcionar de verdade
+## Estado real (16/11/2026)
 
-- **Regras homologadas** da ProjacSeg (as 26 regras, calendário, campos do CRM). Hoje só há regras de
-  exemplo, marcadas como não homologadas.
-- **Portal de testes**, aplicativo local (client_id/secret) e servidor HTTPS com PostgreSQL.
-- **Decisão de LGPD e provedor/chave de IA** para ligar o chat inteligente.
+| Área                                                                                   | Status                                                           |
+| -------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Dashboard Minha Jornada, temas, filtros, responsividade, acessibilidade                | Testado localmente                                               |
+| Integração do frontend com o Bitrix24 (foto, card do negócio, chat nativo, instalação) | Testado localmente · aguardando homologação em portal            |
+| Proteção contra abrir negócios fictícios e respostas fictícias em portal real          | Testado localmente                                               |
+| Backend: instalação, tokens criptografados, sessão assinada, leitura do CRM, eventos   | Testado localmente · aguardando portal de testes                 |
+| Motor de regras genérico (calendário, risco, atraso, escalonamento, histórico)         | Testado localmente                                               |
+| Regras reais da ProjacSeg no motor                                                     | **Bloqueado** — aguardando homologação                           |
+| Condições por campo, prazo relativo a data, encerramento por campo, modo sombra        | Planejado                                                        |
+| PostgreSQL/Prisma (schema + migração inicial)                                          | Testado localmente (PGlite); migração não revisada para produção |
+| Bot do assistente (`imbot` v1)                                                         | Implementado · **API v1 descontinuada** → migrar para `imbot.v2` |
+| IA no chat (Claude, desligada por padrão)                                              | Testado com mocks · aguardando decisão de LGPD                   |
+| Análise das automações (`tools/bitrix-automations`) e relatórios                       | Testado localmente · interpretação aguardando validação          |
+| Avaliação Alaio Vibecode / Hermes / Chatbots 2.0                                       | Pesquisa documental concluída · PoC planejada                    |
+| MCP de documentação do Bitrix24 (`.mcp.json`)                                          | Configurado no projeto · testado (lista 8 ferramentas)           |
+| Agentes multiagentes, ferramentas com ação, aprovação humana                           | Planejado                                                        |
+| Imagens originais do dashboard em `docs/reference/design/`                             | Bloqueado — imagens não recebidas                                |
+| Deploy de produção                                                                     | Não autorizado                                                   |
 
-### Não implementado
+### Divergências em relação ao prompt de continuidade
 
-- Visão do gestor (equipe e escalonamentos recebidos) no dashboard.
-- Edição de regras pela interface (hoje: arquivo versionado por empresa).
-- Fila distribuída (BullMQ/Redis) — o agendador atual roda em um único processo.
-- Uso do dashboard como página inicial automática do Bitrix24 (homologação posterior).
-
-## Dados demonstrativos
-
-Fora do Bitrix24: usuário **Lucas**; indicadores 42 / 12 / 3 / 8; negócios Carlos Almeida, Empresa
-Martins, Roberto Lima, Juliana Santos, Clínica Oliveira e Ana Souza — todos fictícios.
+O prompt descrevia o estado até o commit `97d6cd6`. O repositório já tinha mais três commits:
+instalação em portal de testes (`5f8922c`), motor de regras + backend + bot + IA (`19387dd`) e a
+primeira análise dos BPT (`326d760`). Esse trabalho foi preservado e está classificado acima; o motor
+é genérico e **não contém regras da ProjacSeg**.
 
 ## Partes envolvidas
 
 - **TechStone Consultoria** — desenvolvimento e implantação.
-- **ProjacSeg** — cliente; homologa regras, números e layout.
+- **ProjacSeg** — cliente; homologa regras, números, layout e decisões de dados.

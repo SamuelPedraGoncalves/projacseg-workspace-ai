@@ -58,6 +58,15 @@
   tratamento de dados com o provedor) antes de enviar qualquer dado pessoal.
 - O conteúdo enviado à IA é delimitado e tratado como dado, não instrução.
 
+## Material do cliente (automações)
+
+- Exportações `.bpt` tratadas como dados não confiáveis: nada é executado; leitor de PHP serialize
+  sem objetos nem referências, com limites.
+- Originais, nomes a anonimizar e mapa de pseudônimos em `data/private/` (fora do Git). Versionado
+  apenas o material anonimizado.
+- As automações apontam webhooks para servidores próprios da corretora: hosts anonimizados; nenhum
+  token do Bitrix24 encontrado nas URLs.
+
 ## Pendências
 
 - Política de retenção e criptografia dos tokens OAuth.

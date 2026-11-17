@@ -2,6 +2,29 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
+## [0.5.0] — 16/11/2026 — Levantamento operacional e avaliação de IA
+
+### Adicionado
+
+- `tools/bitrix-automations`: analisador seguro e testado (13 testes) de modelos `.bpt`, com
+  inventário, matriz de tarefas, catálogo de regras rastreável, escalonamentos, dependências e JSON
+  anonimizado em `docs/reference/automations/`.
+- Questionário de homologação das automações.
+- `docs/HERMES_EVALUATION.md`, `docs/AI_INTEGRATION.md`, `docs/OPERATIONAL_ENGINE.md`,
+  `docs/TESTING.md`.
+- MCP de documentação do Bitrix24 no projeto (`.mcp.json`).
+
+### Alterado
+
+- `docs/AUTOMACOES_ATUAIS.md` → `docs/BITRIX24_AUTOMATIONS.md`, com 24 regras estritas (antes 19
+  consolidadas à mão) e classificação das divergências.
+- Portal real: banner sem resumo fictício; assistente diferencia "não instalado" de "indisponível".
+- PROJECT e ROADMAP com status explícito e proposta da próxima sprint.
+
+### Removido
+
+- `tools/bitrix-automations/analisar.mjs` (substituído pelo pacote).
+
 ## [0.4.1] — 16/11/2026 — Análise das automações atuais
 
 ### Adicionado

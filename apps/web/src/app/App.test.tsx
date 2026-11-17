@@ -132,6 +132,20 @@ describe("Dentro do Bitrix24", () => {
     expect(within(dialog).getByText(/ainda não está instalado neste portal/)).toBeInTheDocument();
     expect(within(dialog).queryByLabelText("Mensagem ao assistente")).not.toBeInTheDocument();
   });
+
+  it("distingue falha ao abrir o chat de bot não instalado", async () => {
+    const user = userEvent.setup();
+    renderApp("/", bitrixPlatform("unavailable"));
+    await user.click(screen.getByRole("button", { name: "Conversar com assistente" }));
+    const dialog = await screen.findByRole("dialog", { name: "Assistente Projacseg" });
+    expect(within(dialog).getByText(/Não foi possível abrir o chat/)).toBeInTheDocument();
+  });
+
+  it("no portal real não mostra o resumo fictício da demonstração", () => {
+    renderApp("/", bitrixPlatform());
+    expect(screen.queryByText(/Você tem 3 ações prioritárias/)).not.toBeInTheDocument();
+    expect(screen.getByText(/assim que o Workspace for instalado/)).toBeInTheDocument();
+  });
 });
 
 describe("Instalação fora do Bitrix24", () => {
