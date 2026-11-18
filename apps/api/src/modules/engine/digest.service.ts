@@ -1,6 +1,7 @@
 import { atLocalTime, isBusinessDay, localDateKey, ruleMode } from "@projacseg/engine";
 import type { Store, TenantRecord } from "../../store/types";
 import { buildJourney } from "../journey/journey.service";
+import { inPilot, isObserving, observerOf } from "../tenants/pilot";
 import type { Notifier } from "./ports";
 
 /**
@@ -37,16 +38,32 @@ export class DigestService {
     const day = localDateKey(now, calendar);
     let sent = 0;
 
+    // Quem recebe o resumo de quem: cada um o seu; no modo de observação do piloto, quem observa
+    // recebe o resumo do colaborador observado (que continua sem receber nada).
+    const deliveries = new Map<string, string>();
     for (const userId of users) {
-      const journey = await buildJourney(this.store, tenant, userId, now);
+      if (inPilot(tenant, userId) && !isObserving(tenant, userId)) deliveries.set(userId, userId);
+      const observer = observerOf(tenant, userId);
+      if (observer) deliveries.set(observer, userId);
+    }
+
+    for (const [recipient, subject] of deliveries) {
+      const journey = await buildJourney(this.store, tenant, subject, now);
       const waiting = journey.deals.filter((deal) => deal.status === "waiting").length;
       const { atRisk, actionsToday } = journey.summary;
       if (atRisk + actionsToday + waiting === 0) continue;
+      const prefix = recipient === subject ? "" : "👁 [B]Observação[/B] — ";
       const message =
-        `Resumo do dia: ${atRisk} em risco, ${actionsToday} para hoje, ${waiting} aguardando ` +
-        `terceiros. ${journey.briefing}`;
+        `${prefix}Resumo do dia: ${atRisk} em risco, ${actionsToday} para hoje, ${waiting} ` +
+        `aguardando terceiros. ${journey.briefing}`;
       if (
-        await this.notifier.notify(tenant, userId, "digest", `digest:${userId}:${day}`, message)
+        await this.notifier.notify(
+          tenant,
+          recipient,
+          "digest",
+          `digest:${recipient}:${day}`,
+          message,
+        )
       ) {
         sent += 1;
       }

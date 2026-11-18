@@ -21,6 +21,16 @@ export class Bitrix24ApiError extends Error {
   get isExpiredToken(): boolean {
     return this.code === "expired_token" || this.code === "invalid_token";
   }
+
+  /** Limite de requisições do portal (QUERY_LIMIT_EXCEEDED, 429/503): vale esperar e repetir. */
+  get isRateLimited(): boolean {
+    return (
+      this.code === "QUERY_LIMIT_EXCEEDED" ||
+      this.code === "OPERATION_TIME_LIMIT" ||
+      this.status === 429 ||
+      this.status === 503
+    );
+  }
 }
 
 /**

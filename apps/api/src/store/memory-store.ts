@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { RuleDefinition } from "@projacseg/engine";
 import type {
+  AssistantActionRecord,
   DealSnapshotRecord,
   OccurrenceEventRecord,
   OccurrenceRecord,
@@ -30,6 +31,7 @@ export function createMemoryStore(): Store {
   const occurrences = new Map<string, OccurrenceRecord>();
   const events: OccurrenceEventRecord[] = [];
   const notifications = new Set<string>();
+  const actions = new Map<string, AssistantActionRecord>();
 
   const dealKey = (tenantId: string, dealId: string) => `${tenantId}\u0000${dealId}`;
   const findTenant = (predicate: (tenant: TenantRecord) => boolean) => {
@@ -136,6 +138,33 @@ export function createMemoryStore(): Store {
       },
       listEvents: async (occurrenceId) =>
         events.filter((event) => event.occurrenceId === occurrenceId).map(clone),
+    },
+    assistantActions: {
+      create: async (input) => {
+        const record: AssistantActionRecord = {
+          ...input,
+          id: randomUUID(),
+          status: "pending",
+          createdAt: new Date(),
+        };
+        actions.set(record.id, clone(record));
+        return clone(record);
+      },
+      listPending: async (tenantId, userId) =>
+        [...actions.values()]
+          .filter(
+            (item) =>
+              item.tenantId === tenantId && item.userId === userId && item.status === "pending",
+          )
+          .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+          .map(clone),
+      update: async (id, patch) => {
+        const existing = actions.get(id);
+        if (!existing) throw new Error(`Ação inexistente: ${id}`);
+        const updated = { ...existing, ...patch };
+        actions.set(id, clone(updated));
+        return clone(updated);
+      },
     },
     notifications: {
       claim: async (tenantId, _userId, _kind, dedupeKey) => {

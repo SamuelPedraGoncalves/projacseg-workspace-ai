@@ -197,3 +197,31 @@ describe("modo piloto", () => {
     });
   });
 });
+
+describe("aviso ao superior no dashboard e na IA", () => {
+  it("no piloto, o escalonamento aparece como registrado, nunca como superior notificado", async () => {
+    const { buildJourney } = await import("../journey/journey.service");
+    const store = createMemoryStore();
+    const tenant = await pilotTenant(store);
+    await store.rules.replaceAll(tenant.id, [RULE]);
+    await store.deals.upsert(tenant.id, snapshot());
+    const { record } = await store.occurrences.create({
+      tenantId: tenant.id,
+      ruleCode: RULE.code,
+      dealId: "501",
+      stageId: "PREPARATION",
+      stageEnteredAt: at("2026-11-16T10:00:00-03:00"),
+      responsibleId: "7",
+      openedAt: at("2026-11-16T10:00:00-03:00"),
+      dueAt: at("2026-11-17T18:00:00-03:00"),
+      riskAt: at("2026-11-17T10:00:00-03:00"),
+    });
+    await store.occurrences.update(record.id, { status: "overdue", escalationLevel: 1 });
+
+    const journey = await buildJourney(store, tenant, "7", at("2026-11-18T10:00:00-03:00"));
+    expect(journey.deals[0]?.deadlineLabel).toBe(
+      "Em atraso há 1 dia · escalonamento registrado, superior não avisado",
+    );
+    expect(journey.briefing).not.toContain("superior notificado");
+  });
+});

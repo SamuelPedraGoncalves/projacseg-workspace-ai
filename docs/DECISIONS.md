@@ -275,3 +275,40 @@ follow-up seria reiniciado sem contato real.
 O Bitrix24 devolve campos do tipo data como meia-noite UTC (`2025-09-09T03:00:00+03:00`), que em
 Brasília cairia no dia anterior. O leitor do CRM guarda só a data (`2025-09-09`) para campos que o
 portal declara como `date`; campos `datetime` ficam com a hora.
+
+## D-049 — A IA propõe, o servidor decide e o colaborador confirma
+
+Mover etapa e preencher campo pelo chat: o modelo usa ferramentas só para propor; a autorização
+(negócio do próprio colaborador, lista de etapas e campos, valor válido) é código, a confirmação é um SIM
+explícito e tudo é registrado e comentado no card. A IA não altera prazos nem escalonamentos.
+
+## D-050 — Banco local na porta 5544
+
+O PostgreSQL local de testes (PGlite) usa a porta 5544 para não colidir com outros PostgreSQL da
+máquina (havia um container de outro projeto em 5432).
+
+## D-051 — Descartar pelo chat exige motivo
+
+O descarte move o negócio para a etapa de perdido do funil e grava, junto, uma opção do campo de motivo
+de perda. Sem motivo reconhecido, nada é proposto; a etapa de perdido não entra na lista comum de
+etapas.
+
+## D-052 — "Superior notificado" só quando o aviso saiu
+
+O dashboard e o contexto da IA diziam "superior notificado" para qualquer escalonamento, inclusive os
+só registrados (regra em sombra, modo piloto). Agora o rótulo diz "escalonamento registrado, superior
+não avisado" nesses casos.
+
+## D-053 — Formato próprio do chat e memória curta sem nomes
+
+O messenger do Bitrix24 não renderiza Markdown; o assistente escreve com os códigos do chat ([B]) e o
+servidor converte o que escapar. A conversa recente fica em memória do servidor por 30 minutos (no
+máximo 10 mensagens), com os negócios só como "Negócio #id": os nomes de clientes continuam sem ir para
+a IA. Reiniciar o servidor apaga essa memória.
+
+## D-054 — Observação no piloto é só leitura e não fala com o observado
+
+Para testar com uma carteira maior, um usuário do piloto pode observar outro colaborador
+(`pilot.viewAs`). O CRM passa a ler os negócios dele, mas: as ações pelo chat ficam desligadas, os
+alertas e o resumo vão para quem observa (marcados) e nada é enviado ao observado nem aos superiores
+dele.

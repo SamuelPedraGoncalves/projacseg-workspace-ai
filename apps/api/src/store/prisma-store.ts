@@ -2,6 +2,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import type { OccurrenceStatus, RuleDefinition } from "@projacseg/engine";
 import { Prisma, PrismaClient } from "../generated/prisma/client";
 import type {
+  AssistantActionRecord,
   DealSnapshotRecord,
   OccurrenceRecord,
   Store,
@@ -59,6 +60,23 @@ const toDeal = (row: DealRow): DealSnapshotRecord => ({
 });
 
 const json = (value: unknown) => value as Prisma.InputJsonValue;
+
+type ActionRow = Prisma.AssistantActionGetPayload<object>;
+
+const toAction = (row: ActionRow): AssistantActionRecord => ({
+  id: row.id,
+  tenantId: row.tenantId,
+  userId: row.userId,
+  dealId: row.dealId,
+  kind: row.kind as AssistantActionRecord["kind"],
+  payload: row.payload as Record<string, string>,
+  summary: row.summary,
+  status: row.status as AssistantActionRecord["status"],
+  createdAt: row.createdAt,
+  expiresAt: row.expiresAt,
+  ...(row.decidedAt ? { decidedAt: row.decidedAt } : {}),
+  ...(row.result ? { result: row.result } : {}),
+});
 
 /** Armazenamento em PostgreSQL via Prisma (driver adapter `pg`). */
 export function createPrismaStore(databaseUrl: string): Store {
@@ -222,6 +240,23 @@ export function createPrismaStore(databaseUrl: string): Store {
           payload: row.payload as Record<string, unknown>,
           createdAt: row.createdAt,
         })),
+    },
+    assistantActions: {
+      create: async (input) =>
+        toAction(
+          await db.assistantAction.create({
+            data: { ...input, payload: json(input.payload), status: "pending" },
+          }),
+        ),
+      listPending: async (tenantId, userId) =>
+        (
+          await db.assistantAction.findMany({
+            where: { tenantId, userId, status: "pending" },
+            orderBy: { createdAt: "asc" },
+          })
+        ).map(toAction),
+      update: async (id, patch) =>
+        toAction(await db.assistantAction.update({ where: { id }, data: patch })),
     },
     notifications: {
       claim: async (tenantId, userId, kind, dedupeKey) => {

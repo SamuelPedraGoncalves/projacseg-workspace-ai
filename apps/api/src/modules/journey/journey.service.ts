@@ -1,5 +1,11 @@
-import { atLocalTime, projectJourney, type JourneyProjection } from "@projacseg/engine";
+import {
+  atLocalTime,
+  notifiedWhenActive,
+  projectJourney,
+  type JourneyProjection,
+} from "@projacseg/engine";
 import type { Store, TenantRecord } from "../../store/types";
+import { pilotUsers } from "../tenants/pilot";
 
 /** Dashboard "Minha Jornada" de um colaborador, calculado pelo motor (sem IA). */
 export async function buildJourney(
@@ -25,5 +31,8 @@ export async function buildJourney(
     rules,
     calendar: tenant.config.calendar,
     now,
+    // No modo piloto o superior (fora do piloto) não recebe o aviso: só fica registrado.
+    escalationNotified: (occurrence, rule) =>
+      notifiedWhenActive(occurrence, rule) && !pilotUsers(tenant),
   });
 }

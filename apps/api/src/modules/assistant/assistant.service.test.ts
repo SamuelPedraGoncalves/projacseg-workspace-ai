@@ -25,7 +25,7 @@ const journey: JourneyProjection = {
       clientName: "Empresa Martins",
       branch: "Empresarial",
       nextAction: "Cadastrar no Teleport",
-      deadlineLabel: "Vence amanhã",
+      deadlineLabel: "Prazo amanhã",
       status: "upcoming",
       priority: "neutral",
       pipelineName: "Demais Ramos",
@@ -52,8 +52,8 @@ describe("contexto enviado à IA", () => {
   it("recoloca os nomes sem confundir #12 com #123", () => {
     const { names } = buildContext(journey, "Lucas", true);
     expect(restoreNames("Priorize o Negócio #12 e depois o Negócio #123.", names)).toBe(
-      "Priorize o Negócio #12 (Carlos Almeida) e depois o Negócio #123 (Empresa Martins).",
+      "Priorize o [B]Negócio #12[/B] (Carlos Almeida) e depois o [B]Negócio #123[/B] (Empresa Martins).",
     );
-    expect(restoreNames("Negócio #999 não existe.", names)).toBe("Negócio #999 não existe.");
+    expect(restoreNames("Negócio #999 não existe.", names)).toBe("[B]Negócio #999[/B] não existe.");
   });
 });

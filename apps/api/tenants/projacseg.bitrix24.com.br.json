@@ -6,10 +6,43 @@
     "workEnd": "18:00",
     "holidays": ["2026-11-20", "2026-12-25", "2027-01-01"]
   },
+  "fieldMapping": {
+    "branch": "UF_CRM_1661178983241",
+    "insuranceType": "UF_CRM_1737579242776"
+  },
   "digestTime": "09:00",
   "aiEnabled": true,
   "pilot": {
-    "userIds": ["13"]
+    "userIds": ["13"],
+    "viewAs": {
+      "13": "51"
+    }
+  },
+  "assistant": {
+    "actions": true,
+    "confirmMinutes": 10,
+    "stages": {
+      "0": ["NEW", "UC_YI2RCB", "UC_IYS6WC", "UC_130IYL"],
+      "1": ["C1:NEW", "C1:EXECUTING", "C1:UC_YDJH2K", "C1:UC_N0RIBP", "C1:FINAL_INVOICE"]
+    },
+    "fields": [
+      "UF_CRM_1737579242776",
+      "UF_CRM_6532BA4062343",
+      "UF_CRM_1661178983241",
+      "UF_CRM_1675339617",
+      "UF_CRM_1713373223614",
+      "UF_CRM_1773058529"
+    ],
+    "discard": {
+      "0": {
+        "stage": "LOSE",
+        "reasonField": "UF_CRM_1705341446"
+      },
+      "1": {
+        "stage": "C1:LOSE",
+        "reasonField": "UF_CRM_1705341446"
+      }
+    }
   },
   "rules": [
     {
@@ -36,7 +69,8 @@
       },
       "deadlineFrom": {
         "field": "UF_CRM_1675339617",
-        "direction": "before"
+        "direction": "before",
+        "label": "Vigência"
       },
       "riskAtRatio": 0.5,
       "riskBefore": {
@@ -333,7 +367,8 @@
       },
       "deadlineFrom": {
         "field": "UF_CRM_1713373223614",
-        "direction": "after"
+        "direction": "after",
+        "label": "Agendamento"
       },
       "riskAtRatio": 0.5,
       "riskBefore": {

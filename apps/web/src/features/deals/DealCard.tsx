@@ -53,7 +53,10 @@ export function DealCard({ deal, opensInCrm = false, onOpen }: DealCardProps) {
           {category}
         </p>
         <h3 className="mt-[3px] text-[clamp(15px,1.25vw,21px)] font-bold">{deal.clientName}</h3>
-        <p className="mt-[3px] text-xs text-(--text-secondary)">{deal.nextAction}</p>
+        <p className="mt-[3px] text-xs text-(--text-secondary)">
+          <span className="font-semibold">{deal.stageName}</span>
+          {deal.stageSince ? ` desde ${deal.stageSince}` : ""} · {deal.nextAction}
+        </p>
       </div>
 
       <p

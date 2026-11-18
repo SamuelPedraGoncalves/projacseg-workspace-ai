@@ -88,7 +88,17 @@ export const ruleDefinitionSchema = z
      * vez da entrada na etapa. Sem a data preenchida a ocorrência não abre. O prazo é fixado na
      * abertura: editar a data depois não adia a ocorrência.
      */
-    deadlineFrom: z.object({ field: fieldCode, direction: z.enum(["after", "before"]) }).optional(),
+    deadlineFrom: z
+      .object({
+        field: fieldCode,
+        direction: z.enum(["after", "before"]),
+        /**
+         * Nome da data no dashboard ("Vigência", "Agendamento"). Com ele, o card do negócio mostra a
+         * data enquanto a ocorrência estiver aberta, qualquer que seja a ação em destaque.
+         */
+        label: z.string().trim().min(1).max(30).optional(),
+      })
+      .optional(),
     /** Conclui a ocorrência quando todas valem (ex.: "Número do cálculo" preenchido). */
     completeWhen: z.array(fieldConditionSchema).min(1).optional(),
     responsible: responsibleSchema.optional(),

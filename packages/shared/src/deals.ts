@@ -25,6 +25,8 @@ export const dealSchema = z.object({
   priority: dealPrioritySchema,
   pipelineName: z.string().min(1),
   stageName: z.string().min(1),
+  /** Desde quando está na etapa atual ("10/11"). */
+  stageSince: z.string().min(1).optional(),
   responsibleName: z.string().min(1),
 });
 

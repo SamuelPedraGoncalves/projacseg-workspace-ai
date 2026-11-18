@@ -7,7 +7,7 @@ import {
 } from "@projacseg/engine";
 import type { FastifyBaseLogger } from "fastify";
 import type { DealSnapshotRecord, OccurrenceRecord, Store, TenantRecord } from "../../store/types";
-import { inPilot } from "../tenants/pilot";
+import { inPilot, observerOf } from "../tenants/pilot";
 import { dealLink, engineMessages } from "./messages";
 import type { DealSource, Notifier, SuperiorResolver } from "./ports";
 
@@ -34,8 +34,17 @@ const toState = (deal: DealSnapshotRecord): DealState => ({
  * Executa o motor de regras sobre os negócios de uma empresa e persiste o resultado: ocorrências,
  * histórico (somente inserção) e mensagens. Não depende de IA.
  */
+/**
+ * Modo de observação: no máximo 5 avisos redirecionados por hora para quem observa. Ao começar a
+ * observar uma carteira com muitos prazos já vencidos, o resto fica no histórico, no resumo diário e
+ * no dashboard, em vez de uma enxurrada de mensagens.
+ */
+const OBSERVER_LIMIT = 5;
+const OBSERVER_WINDOW_MS = 60 * 60_000;
+
 export class EngineService {
   private readonly now: () => Date;
+  private readonly observerBudget = new Map<string, { start: number; count: number }>();
 
   constructor(private readonly deps: EngineDeps) {
     this.now = deps.now ?? (() => new Date());
@@ -137,6 +146,33 @@ export class EngineService {
       return;
     }
     if (!inPilot(tenant, userId)) {
+      // Modo de observação: o aviso do colaborador observado vai para quem o observa, marcado.
+      const observer = observerOf(tenant, userId);
+      if (observer) {
+        const key = `${tenant.id}\u0000${observer}`;
+        const nowMs = this.now().getTime();
+        const budget = this.observerBudget.get(key);
+        const window =
+          budget && nowMs - budget.start < OBSERVER_WINDOW_MS ? budget : { start: nowMs, count: 0 };
+        if (window.count >= OBSERVER_LIMIT) {
+          await this.event(occurrence, "notification_suppressed", {
+            kind,
+            to: userId,
+            mode: "observer_limit",
+          });
+          return;
+        }
+        this.observerBudget.set(key, { start: window.start, count: window.count + 1 });
+        await this.event(occurrence, "notification_redirected", { kind, to: userId, observer });
+        await this.deps.notifier.notify(
+          tenant,
+          observer,
+          kind,
+          `${dedupeKey}:observer:${observer}`,
+          `👁 [B]Observação[/B] (aviso que iria para o colaborador observado):\n${message}`,
+        );
+        return;
+      }
       await this.event(occurrence, "notification_suppressed", { kind, to: userId, mode: "pilot" });
       return;
     }

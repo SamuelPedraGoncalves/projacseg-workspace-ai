@@ -18,6 +18,25 @@ export interface TenantConfig {
   roles?: Record<string, string>;
   /** Modo piloto: o Workspace só funciona para estes usuários (ver modules/tenants/pilot.ts). */
   pilotUserIds?: string[];
+  /** Modo de observação no piloto: usuário do piloto → colaborador cujos negócios ele vê. */
+  pilotViewAs?: Record<string, string>;
+  /** Ações do assistente no chat (mover etapa, preencher campo). Desligadas sem esta seção. */
+  assistant?: AssistantConfig;
+}
+
+export interface AssistantConfig {
+  actions: boolean;
+  /** Minutos para o colaborador confirmar uma ação proposta (padrão 10). */
+  confirmMinutes?: number;
+  /** Pipeline (CATEGORY_ID) → etapas (STAGE_ID) para onde o assistente pode mover negócios. */
+  stages: Record<string, string[]>;
+  /** Campos (códigos do Bitrix24) que o assistente pode preencher. */
+  fields: string[];
+  /**
+   * Descarte por pipeline: etapa de perdido e o campo (lista) com o motivo, sempre obrigatório.
+   * Sem esta entrada, o assistente não descarta negócios naquele pipeline.
+   */
+  discard?: Record<string, { stage: string; reasonField: string }>;
 }
 
 export interface TenantRecord {
@@ -73,6 +92,25 @@ export interface OccurrenceEventRecord {
   createdAt?: Date;
 }
 
+export type AssistantActionStatus = "pending" | "executed" | "cancelled" | "expired" | "failed";
+
+/** Ação pedida ao assistente no chat: proposta → confirmação → execução (auditável). */
+export interface AssistantActionRecord {
+  id: string;
+  tenantId: string;
+  userId: string;
+  dealId: string;
+  kind: "stage" | "field" | "discard";
+  /** Campos do negócio a alterar, já validados (ex.: { STAGE_ID: "UC_IYS6WC" }). */
+  payload: Record<string, string>;
+  summary: string;
+  status: AssistantActionStatus;
+  createdAt: Date;
+  expiresAt: Date;
+  decidedAt?: Date;
+  result?: string;
+}
+
 /**
  * Armazenamento da aplicação. Duas implementações: memória (desenvolvimento e testes, sem banco) e
  * Prisma/PostgreSQL. Tudo é escopado por `tenantId`.
@@ -112,6 +150,17 @@ export interface Store {
     ): Promise<OccurrenceRecord[]>;
     appendEvent(event: OccurrenceEventRecord): Promise<void>;
     listEvents(occurrenceId: string): Promise<OccurrenceEventRecord[]>;
+  };
+  assistantActions: {
+    create(
+      input: Omit<AssistantActionRecord, "id" | "status" | "createdAt" | "decidedAt" | "result">,
+    ): Promise<AssistantActionRecord>;
+    /** Pendentes do colaborador, mais antigas primeiro (inclui as vencidas, que o serviço expira). */
+    listPending(tenantId: string, userId: string): Promise<AssistantActionRecord[]>;
+    update(
+      id: string,
+      patch: { status: AssistantActionStatus; decidedAt: Date; result?: string },
+    ): Promise<AssistantActionRecord>;
   };
   notifications: {
     /** Registra o envio; devolve `false` se a chave já existia (não enviar de novo). */

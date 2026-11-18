@@ -84,7 +84,7 @@ describe("bot do assistente (imbot.v2)", () => {
     expect(input.context).not.toContain("Carlos Almeida");
     expect(input.system).toMatch(/não pode cancelar, adiar/);
     expect(sent(rest.calls)?.params.fields).toEqual({
-      message: "Comece pelo Negócio #501 (Carlos Almeida - Auto).",
+      message: `Comece pelo [URL=https://${DOMAIN}/crm/deal/details/501/]Negócio #501[/URL] (Carlos Almeida - Auto).`,
     });
     await app.close();
   });

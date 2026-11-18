@@ -25,10 +25,10 @@ const occ = (id: string, dealId: string, overrides: Partial<ProjectedOccurrence>
 describe("deadlineLabel", () => {
   it("descreve prazos de forma determinística", () => {
     expect(deadlineLabel(at("2026-11-17T18:00:00-03:00"), now, calendar)).toBe(
-      "Vence hoje às 18:00",
+      "Prazo hoje às 18:00",
     );
-    expect(deadlineLabel(at("2026-11-18T18:00:00-03:00"), now, calendar)).toBe("Vence amanhã");
-    expect(deadlineLabel(at("2026-11-20T18:00:00-03:00"), now, calendar)).toBe("Vence em 3 dias");
+    expect(deadlineLabel(at("2026-11-18T18:00:00-03:00"), now, calendar)).toBe("Prazo amanhã");
+    expect(deadlineLabel(at("2026-11-20T18:00:00-03:00"), now, calendar)).toBe("Prazo em 3 dias");
     expect(deadlineLabel(at("2026-11-17T09:00:00-03:00"), now, calendar)).toBe("Em atraso");
     expect(deadlineLabel(at("2026-11-15T18:00:00-03:00"), now, calendar)).toBe(
       "Em atraso há 2 dias",
@@ -87,7 +87,7 @@ describe("projectJourney", () => {
       deadlineLabel: "Em atraso há 1 dia · superior notificado",
       priority: "danger",
     });
-    expect(result.deals[2]?.deadlineLabel).toBe("Aguardando terceiros · vence em 4 dias");
+    expect(result.deals[2]?.deadlineLabel).toBe("Aguardando terceiros · prazo em 4 dias");
     expect(result.deals.find((deal) => deal.id === "6")?.deadlineLabel).toBe("Sem prazo pendente");
   });
 

@@ -35,7 +35,36 @@ const tenantFileSchema = z.object({
    * Para testar num portal real sem afetar os demais colaboradores.
    */
   pilot: z
-    .object({ userIds: z.array(z.string().regex(/^\d+$/, "ID de usuário numérico")).min(1) })
+    .object({
+      userIds: z.array(z.string().regex(/^\d+$/, "ID de usuário numérico")).min(1),
+      /**
+       * Modo de observação: usuário do piloto → colaborador cujos negócios ele vê (só leitura). O
+       * colaborador observado continua fora do piloto: não acessa nada e não recebe mensagens.
+       */
+      viewAs: z.record(z.string().regex(/^\d+$/), z.string().regex(/^\d+$/)).optional(),
+    })
+    .refine((pilot) => Object.keys(pilot.viewAs ?? {}).every((id) => pilot.userIds.includes(id)), {
+      message: "pilot.viewAs: só usuários do piloto podem observar outro colaborador",
+      path: ["viewAs"],
+    })
+    .optional(),
+  /**
+   * Ações do assistente pelo chat. Só etapas e campos listados aqui; o servidor confere tudo antes de
+   * executar e pede confirmação ao colaborador.
+   */
+  assistant: z
+    .object({
+      actions: z.boolean(),
+      confirmMinutes: z.number().int().min(1).max(60).optional(),
+      stages: z.record(z.string(), z.array(z.string()).min(1)),
+      fields: z.array(z.string().regex(/^[A-Z][A-Z0-9_]*$/)),
+      discard: z
+        .record(
+          z.string(),
+          z.object({ stage: z.string(), reasonField: z.string().regex(/^[A-Z][A-Z0-9_]*$/) }),
+        )
+        .optional(),
+    })
     .optional(),
   rules: z.unknown().optional(),
 });
@@ -75,6 +104,8 @@ export async function loadTenantFile(dir: string, domain: string): Promise<Tenan
       aiEnabled: file.aiEnabled ?? false,
       roles,
       ...(file.pilot ? { pilotUserIds: file.pilot.userIds } : {}),
+      ...(file.pilot?.viewAs ? { pilotViewAs: file.pilot.viewAs } : {}),
+      ...(file.assistant ? { assistant: file.assistant } : {}),
     },
     rules,
   };

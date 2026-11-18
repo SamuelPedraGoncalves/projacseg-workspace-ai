@@ -74,8 +74,8 @@ pnpm db:migrate
 pnpm portal       # build + API em http://127.0.0.1:3333
 ```
 
-Sem Docker: `pnpm --filter @projacseg/api db:local` (aplica as migrações e serve em 127.0.0.1:5432) e,
-no `.env`, `DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable`.
+Sem Docker: `pnpm --filter @projacseg/api db:local` (aplica as migrações e serve em 127.0.0.1:5544, para não colidir com outro PostgreSQL) e,
+no `.env`, `DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5544/postgres?sslmode=disable`.
 
 Em outro terminal, inicie o túnel. Confira `https://<url-pública>/health`: deve mostrar
 `"database": "postgresql"` e `"bitrix24": "configured"`.
@@ -123,6 +123,11 @@ Para testar num portal com dados reais sem afetar os demais colaboradores, defin
 ```json
 { "pilot": { "userIds": ["13"] }, "digestTime": null, "aiEnabled": false, "rules": [] }
 ```
+
+Para testar com a carteira de outro colaborador, acrescente `"viewAs": { "13": "<ID do colaborador>" }`
+em `pilot`: o usuário 13 vê os negócios dele no dashboard e no chat (só leitura, sem ações) e recebe
+os alertas e o resumo que iriam para ele, marcados como observação. O colaborador observado não
+acessa o Workspace e não recebe nada.
 
 O software garante: CRM lido só com filtro pelo responsável do piloto; mensagens só para usuários do
 piloto (escalonamento a chefes fora dele fica no histórico, sem envio); no chat e no aplicativo, quem

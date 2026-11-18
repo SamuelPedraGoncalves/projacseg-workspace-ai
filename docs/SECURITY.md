@@ -65,6 +65,15 @@ envio de mensagens, chat, abertura do aplicativo e API), não por instrução a 
 no banco local (`data/private/pglite`, fora do Git). O túnel público expõe a máquina: encerrar ao fim
 dos testes.
 
+## Ações do assistente no CRM
+
+- A IA não grava nada: propõe; o servidor autoriza (dono do negócio, piloto, lista de etapas e campos,
+  validação do valor) e só executa após o SIM do colaborador, conferindo tudo de novo.
+- Cada ação fica em `AssistantAction` (quem pediu, o quê, quando, resultado) e o card recebe um
+  comentário com o autor do pedido.
+- Os nomes de clientes continuam fora do que vai para a IA; aparecem só na confirmação montada pelo
+  servidor.
+
 ## Assistente no chat
 
 - Dados de negócios só no **chat privado** com o próprio colaborador; em grupo, o bot pede para

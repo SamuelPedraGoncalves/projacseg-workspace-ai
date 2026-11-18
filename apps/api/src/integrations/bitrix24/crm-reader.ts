@@ -1,5 +1,5 @@
 import type { DealSnapshotRecord, TenantRecord } from "../../store/types";
-import { pilotUsers } from "../../modules/tenants/pilot";
+import { crmScopeUsers, pilotUsers } from "../../modules/tenants/pilot";
 import type { Bitrix24Portal } from "./portal";
 
 /** Negócio como vem de crm.deal.list / crm.deal.get. */
@@ -22,11 +22,22 @@ export interface CrmCatalog {
   enums: Map<string, Map<string, string>>;
   /** Tipo de cada campo do negócio (crm.deal.fields): `date`, `datetime`, `enumeration`… */
   fieldTypes: Map<string, string>;
+  /** Rótulo, tipo e opções (listas) de cada campo — usado pelas ações do assistente. */
+  fieldInfo: Map<string, FieldInfo>;
+}
+
+export interface FieldInfo {
+  type: string;
+  label: string;
+  items?: { id: string; value: string }[];
 }
 
 interface FieldMeta {
   type?: string;
-  items?: { ID: string; VALUE: string }[];
+  title?: string;
+  formLabel?: string;
+  listLabel?: string;
+  items?: { ID: string | number; VALUE: string }[];
 }
 
 const CATALOG_TTL_MS = 10 * 60_000;
@@ -71,9 +82,12 @@ export class CrmReader {
     });
   }
 
-  /** Modo piloto: o próprio Bitrix24 filtra — negócios de outros responsáveis nem chegam aqui. */
+  /**
+   * Modo piloto: o próprio Bitrix24 filtra — negócios de outros responsáveis nem chegam aqui. Inclui
+   * o colaborador observado (`pilot.viewAs`), cujos negócios o usuário do piloto vê só para leitura.
+   */
   private pilotFilter(tenant: TenantRecord): { ASSIGNED_BY_ID?: string[] } {
-    const users = pilotUsers(tenant);
+    const users = crmScopeUsers(tenant);
     return users ? { ASSIGNED_BY_ID: users } : {};
   }
 
@@ -135,7 +149,20 @@ export class CrmReader {
       if (items) enums.set(name, new Map(items.map((item) => [String(item.ID), item.VALUE])));
     }
 
-    const catalog = { categories, stages, enums, fieldTypes };
+    const fieldInfo = new Map<string, FieldInfo>(
+      Object.entries(fields.result ?? {}).map(([name, meta]) => [
+        name,
+        {
+          type: meta.type ?? "",
+          label: (meta.formLabel || meta.listLabel || meta.title || name).trim(),
+          ...(meta.items
+            ? { items: meta.items.map((item) => ({ id: String(item.ID), value: item.VALUE })) }
+            : {}),
+        },
+      ]),
+    );
+
+    const catalog = { categories, stages, enums, fieldTypes, fieldInfo };
     this.catalogs.set(tenant.id, { at: Date.now(), catalog });
     return catalog;
   }

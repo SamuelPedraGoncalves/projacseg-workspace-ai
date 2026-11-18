@@ -11,7 +11,7 @@ Status por etapa (legenda em [PROJECT.md](PROJECT.md)).
 | 5   | Integração real de leitura                    | Implementada · aguardando portal de testes                                                                           |
 | 6   | Motor operacional                             | Genérico + condições, datas, conclusão por campo, papéis e modo sombra testados localmente · regras reais bloqueadas |
 | 7   | Primeiro agente de IA (somente leitura)       | Planejado (base: assistente com Claude, desligado)                                                                   |
-| 8   | Ferramentas de execução com aprovação         | Planejado                                                                                                            |
+| 8   | Ferramentas de execução com aprovação         | Mover etapa e preencher campo com confirmação: testado com mocks · ligado no piloto                                  |
 | 9   | Orquestração multiagentes                     | Planejado, se a necessidade for confirmada                                                                           |
 | 10  | Homologação com a ProjacSeg                   | Planejado — nenhuma automação desligada sem autorização                                                              |
 | 11  | Produção                                      | Somente com autorização expressa                                                                                     |

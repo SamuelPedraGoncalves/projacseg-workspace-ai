@@ -26,7 +26,7 @@ export const DEMO_DEALS: readonly Deal[] = [
     branch: "Automóvel",
     insuranceType: "Renovação",
     nextAction: "Enviar cotação",
-    deadlineLabel: "Vence amanhã",
+    deadlineLabel: "Prazo amanhã",
     status: "today",
     priority: "danger",
     pipelineName: "Automóvel",

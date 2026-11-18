@@ -179,3 +179,63 @@ describe("CrmReader.toSnapshot", () => {
     });
   });
 });
+
+describe("limite de chamadas do Bitrix24", () => {
+  it("espera e repete quando o portal responde QUERY_LIMIT_EXCEEDED; chamadas saem em fila", async () => {
+    const store = createMemoryStore();
+    const tenant = await seedTenant(store);
+    let failures = 2;
+    const order: string[] = [];
+    const rest = fakeRest({
+      "crm.deal.get": (params: Record<string, unknown>) => {
+        order.push(String(params.id));
+        if (params.id === 1 && failures > 0) {
+          failures -= 1;
+          return new Bitrix24ApiError(
+            "crm.deal.get",
+            "QUERY_LIMIT_EXCEEDED",
+            503,
+            "Too many requests",
+          );
+        }
+        return { ID: params.id };
+      },
+    });
+    const sleeps: number[] = [];
+    const portal = new Bitrix24Portal(store, cipher, rest.client, null, () => new Date(), {
+      minIntervalMs: 0,
+      retryDelaysMs: [10, 20, 40],
+      sleep: async (ms) => void sleeps.push(ms),
+    });
+    const [first, second] = await Promise.all([
+      portal.call(tenant, "crm.deal.get", { id: 1 }),
+      portal.call(tenant, "crm.deal.get", { id: 2 }),
+    ]);
+    expect(first.result).toEqual({ ID: 1 });
+    expect(second.result).toEqual({ ID: 2 });
+    expect(sleeps).toEqual([10, 20]);
+    // Em fila: a segunda só sai depois que a primeira terminou (com as novas tentativas).
+    expect(order).toEqual(["1", "1", "1", "2"]);
+  });
+
+  it("desiste depois das novas tentativas e não repete outros erros", async () => {
+    const store = createMemoryStore();
+    const tenant = await seedTenant(store);
+    const rest = fakeRest({
+      "crm.deal.get": () => new Bitrix24ApiError("crm.deal.get", "QUERY_LIMIT_EXCEEDED", 503),
+      "crm.deal.list": () => new Bitrix24ApiError("crm.deal.list", "ACCESS_DENIED", 403),
+    });
+    const portal = new Bitrix24Portal(store, cipher, rest.client, null, () => new Date(), {
+      minIntervalMs: 0,
+      retryDelaysMs: [1],
+      sleep: async () => undefined,
+    });
+    await expect(portal.call(tenant, "crm.deal.get", { id: 1 })).rejects.toThrow(/QUERY_LIMIT/);
+    await expect(portal.call(tenant, "crm.deal.list", {})).rejects.toThrow(/ACCESS_DENIED/);
+    expect(rest.calls.map((call) => call.method)).toEqual([
+      "crm.deal.get",
+      "crm.deal.get",
+      "crm.deal.list",
+    ]);
+  });
+});

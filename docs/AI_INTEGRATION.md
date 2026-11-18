@@ -14,14 +14,32 @@
 
 ## Estado atual
 
-| Item                                                                                                              | Status                                                         |
-| ----------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| `LlmProvider` + `AnthropicProvider` (Claude Opus 5.5, fallback do servidor)                                       | Implementado · testado com mocks · desligado por padrão        |
-| Contexto mínimo (projeção do motor) e redação de nomes de segurados                                               | Implementado · testado localmente                              |
-| Bot no chat via `imbot.v2` (`Bot.register`, `Chat.Message.send`, `ONIMBOTV2MESSAGEADD`), dados só no chat privado | Implementado · testado com mocks · aguardando portal de testes |
-| Ferramentas (tool use), aprovação humana, registro de execução por ferramenta                                     | Planejado                                                      |
-| Hermes (gerenciado ou próprio)                                                                                    | Em avaliação — [HERMES_EVALUATION.md](HERMES_EVALUATION.md)    |
-| Multiagentes (Atena, Íris, Clara — nomes provisórios)                                                             | Planejado · só depois de um agente de leitura homologado       |
+| Item                                                                                                                     | Status                                                           |
+| ------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------- |
+| `LlmProvider` + `AnthropicProvider` (Claude Opus 5.5, fallback do servidor)                                              | Implementado · testado com mocks · desligado por padrão          |
+| Contexto mínimo (projeção do motor) e redação de nomes de segurados                                                      | Implementado · testado localmente                                |
+| Bot no chat via `imbot.v2` (`Bot.register`, `Chat.Message.send`, `ONIMBOTV2MESSAGEADD`), dados só no chat privado        | Implementado · testado com mocks · aguardando portal de testes   |
+| Ações pelo chat: mover etapa e preencher campo (tool use), com confirmação do colaborador e registro (`AssistantAction`) | Implementado · testado com mocks · ligado no piloto (usuário 13) |
+| Hermes (gerenciado ou próprio)                                                                                           | Em avaliação — [HERMES_EVALUATION.md](HERMES_EVALUATION.md)      |
+| Multiagentes (Atena, Íris, Clara — nomes provisórios)                                                                    | Planejado · só depois de um agente de leitura homologado         |
+
+## Ações no CRM pelo chat (piloto)
+
+O colaborador pede no chat ("move o 123 para negociação", "o tipo de seguro do 456 é seguro novo",
+"descarta o 789, fechou com outro corretor"). O modelo só **propõe** pelas ferramentas `mover_etapa`,
+`preencher_campo` e `descartar_negocio` (motivo de perda obrigatório); quem decide é o servidor
+(`apps/api/src/modules/assistant/actions.ts`):
+
+1. Autorização no código: negócio do próprio colaborador, aberto, dentro do modo piloto; etapa e campo
+   na lista de `tenants/<domínio>.json` → `assistant`; valor válido (opção de lista existente, data
+   DD/MM/AAAA, texto curto).
+2. O servidor monta a mensagem de confirmação com o que será gravado e pede SIM (vale 10 minutos).
+3. Com SIM: confere tudo de novo, chama `crm.deal.update`, comenta no card (`crm.timeline.comment.add`)
+   "a pedido de <nome>", reavalia o negócio no motor e registra o resultado em `AssistantAction`.
+
+Mover etapa pelo assistente dispara as automações daquela etapa no Bitrix24, como uma mudança manual.
+Etapas movidas por integração (proposta transmitida, processo pendente no Automóvel) e de fechamento
+(concluído, perdido) ficam fora da lista.
 
 ## Contratos propostos (AI Gateway)
 

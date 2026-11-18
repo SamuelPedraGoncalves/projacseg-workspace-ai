@@ -31,6 +31,7 @@ model Tenant {
   occurrences      Occurrence[]
   themePreferences ThemePreference[]
   notifications    NotificationLog[]
+  assistantActions AssistantAction[]
 }
 
 /// Regra operacional configurável (ver packages/engine/src/rules.ts).
@@ -121,6 +122,31 @@ model NotificationLog {
   tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, dedupeKey])
+}
+
+/// Ações pedidas ao assistente no chat (mover etapa, preencher campo): proposta, confirmação e
+/// resultado. Também é o registro de auditoria do que a IA alterou no CRM e a pedido de quem.
+model AssistantAction {
+  id         String    @id @default(cuid())
+  tenantId   String
+  /// Colaborador que pediu (ID do usuário no Bitrix24).
+  userId     String
+  dealId     String
+  /// stage | field
+  kind       String
+  /// Alteração validada pelo servidor (ex.: {"STAGE_ID":"UC_IYS6WC"}).
+  payload    Json
+  /// Texto mostrado ao colaborador na confirmação.
+  summary    String
+  /// pending | executed | cancelled | expired | failed
+  status     String
+  createdAt  DateTime  @default(now())
+  expiresAt  DateTime
+  decidedAt  DateTime?
+  result     String?
+  tenant     Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, userId, status])
 }
 
 /// Preferência de tema por colaborador.

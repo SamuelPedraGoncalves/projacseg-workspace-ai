@@ -19,6 +19,13 @@ Para recarregar o arquivo de uma empresa já instalada sem reinstalar no portal:
 `pnpm --filter @projacseg/api tenants:reload` e reinicie o servidor (a sincronização completa roda na
 partida).
 
+## Ações do assistente pelo chat
+
+Seção `assistant`: `actions` (liga/desliga), `confirmMinutes` (prazo para responder SIM, padrão 10),
+`stages` (pipeline → etapas para onde o assistente pode mover) e `fields` (campos que pode preencher;
+listas, datas, textos e números) e `discard` (pipeline → etapa de perdido e campo do motivo, sempre
+obrigatório). Sem a seção, o assistente só conversa.
+
 ## Modo sombra
 
 Toda regra sem `"mode"` roda em **sombra**: o motor calcula prazos, risco, atraso e escalonamento,

@@ -19,7 +19,7 @@ const RADAR: RuleDefinition = {
   action: "Renovação: cotar e negociar antes da vigência",
   kind: "action",
   deadline: { amount: 10, unit: "business_days" },
-  deadlineFrom: { field: VIGENCIA, direction: "before" },
+  deadlineFrom: { field: VIGENCIA, direction: "before", label: "Vigência" },
   riskAtRatio: 0.5,
   riskBefore: { amount: 5, unit: "business_days" },
   escalation: {
@@ -175,5 +175,124 @@ describe("follow-up que recomeça a cada atividade real", () => {
   it("lê o campo de atividade do CRM e valida a configuração", () => {
     expect(ruleFieldNames([FOLLOW_UP, RADAR])).toEqual([ATIVIDADE, VIGENCIA]);
     expect(parseRules([FOLLOW_UP, RADAR])).toHaveLength(2);
+  });
+});
+
+describe("texto do dashboard: vigência só para renovações", () => {
+  it("renovação mostra a vigência; seguro novo mostra só o prazo da ação", async () => {
+    const { projectJourney } = await import("./journey");
+    const base = {
+      categoryId: "0",
+      categoryName: "Automóvel",
+      stageName: "Cotação enviada / Negociação",
+      assignedById: "7",
+      responsibleName: "Lucas",
+      closed: false,
+    };
+    const deals = [
+      {
+        ...base,
+        dealId: "1",
+        title: "Renovação",
+        stageId: "NEW",
+        fields: { [VIGENCIA]: ["2026-11-30"] },
+      },
+      {
+        ...base,
+        dealId: "2",
+        title: "Seguro novo",
+        stageId: "NEGOTIATION",
+        fields: { [VIGENCIA]: ["2026-11-10"] },
+      },
+    ];
+    const open = (id: string, ruleCode: string, dueAt: string) => ({
+      ...occ({ id, ruleCode, dealId: id, dueAt: at(dueAt) }),
+      riskAt: at(dueAt),
+    });
+    const journey = projectJourney({
+      userId: "7",
+      deals,
+      occurrences: [
+        open("1", RADAR.code, "2026-11-30T18:00:00-03:00"),
+        open("2", FOLLOW_UP.code, "2026-11-18T18:00:00-03:00"),
+      ],
+      rules: [RADAR, FOLLOW_UP],
+      calendar,
+      now: at("2026-11-17T10:00:00-03:00"),
+    });
+    const label = (id: string) => journey.deals.find((deal) => deal.id === id)?.deadlineLabel;
+    expect(label("1")).toBe("Vigência em 13 dias (30/11) · prazo em 13 dias");
+    expect(label("2")).toBe("Prazo amanhã");
+    expect(label("2")).not.toMatch(/vig|venc/i);
+  });
+
+  it("renovação em negociação: o follow-up fica em destaque e a vigência continua no card", async () => {
+    const { projectJourney } = await import("./journey");
+    const journey = projectJourney({
+      userId: "7",
+      deals: [
+        {
+          dealId: "3",
+          title: "Renovação em negociação",
+          categoryId: "0",
+          categoryName: "Automóvel",
+          stageId: "NEGOTIATION",
+          stageName: "Cotação enviada / Negociação",
+          stageEnteredAt: at("2026-11-10T10:00:00-03:00"),
+          assignedById: "7",
+          responsibleName: "Lucas",
+          closed: false,
+          fields: { [VIGENCIA]: ["2026-12-16"] },
+        },
+      ],
+      occurrences: [
+        { ...occ({ id: "r", dealId: "3", dueAt: at("2026-12-02T18:00:00-03:00") }) },
+        {
+          ...occ({
+            id: "f",
+            ruleCode: FOLLOW_UP.code,
+            dealId: "3",
+            stageId: "NEGOTIATION",
+            stageEnteredAt: at("2026-11-16T15:00:00-03:00"),
+            dueAt: at("2026-11-18T18:00:00-03:00"),
+          }),
+        },
+      ],
+      rules: [RADAR, FOLLOW_UP],
+      calendar,
+      now: at("2026-11-17T10:00:00-03:00"),
+    });
+    expect(journey.deals[0]).toMatchObject({
+      stageSince: "10/11",
+      nextAction: "Fazer follow-up com o cliente · última atividade 16/11",
+      deadlineLabel: "Vigência em 29 dias (16/12) · prazo amanhã",
+    });
+  });
+
+  it("data sem rótulo na regra não aparece no card", async () => {
+    const { projectJourney } = await import("./journey");
+    const unlabelled = { ...RADAR, deadlineFrom: { field: VIGENCIA, direction: "before" as const } };
+    const journey = projectJourney({
+      userId: "7",
+      deals: [
+        {
+          dealId: "4",
+          title: "Sem rótulo",
+          categoryId: "0",
+          categoryName: "Automóvel",
+          stageId: "NEW",
+          stageName: "Entrada do negócio",
+          assignedById: "7",
+          responsibleName: "Lucas",
+          closed: false,
+          fields: { [VIGENCIA]: ["2026-11-30"] },
+        },
+      ],
+      occurrences: [occ({ id: "x", dealId: "4", dueAt: at("2026-11-30T18:00:00-03:00") })],
+      rules: [unlabelled],
+      calendar,
+      now: at("2026-11-17T10:00:00-03:00"),
+    });
+    expect(journey.deals[0]?.deadlineLabel).toBe("Prazo em 13 dias");
   });
 });

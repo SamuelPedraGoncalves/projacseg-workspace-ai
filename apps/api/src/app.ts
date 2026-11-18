@@ -9,8 +9,10 @@ import { CrmReader } from "./integrations/bitrix24/crm-reader";
 import { PortalEventVerifier } from "./integrations/bitrix24/event-verifier";
 import { HierarchyResolver } from "./integrations/bitrix24/hierarchy";
 import {
+  BITRIX24_PACING,
   Bitrix24Portal,
   HttpBitrix24OAuthClient,
+  NO_PACING,
   type Bitrix24OAuthClient,
 } from "./integrations/bitrix24/portal";
 import {
@@ -19,6 +21,7 @@ import {
 } from "./integrations/bitrix24/rest-client";
 import { AnthropicProvider } from "./integrations/llm/anthropic-provider";
 import type { LlmProvider } from "./integrations/llm/llm-provider";
+import { AssistantActions } from "./modules/assistant/actions";
 import { AssistantService } from "./modules/assistant/assistant.service";
 import { assistantBotRoutes } from "./modules/assistant-bot/assistant-bot.routes";
 import { BitrixAppService } from "./modules/bitrix-app/bitrix-app.service";
@@ -86,7 +89,15 @@ export async function buildApp(env: Env, deps: AppDeps = {}): Promise<FastifyIns
       : env.BITRIX24_CLIENT_ID && env.BITRIX24_CLIENT_SECRET
         ? new HttpBitrix24OAuthClient(env.BITRIX24_CLIENT_ID, env.BITRIX24_CLIENT_SECRET)
         : null;
-  const portal = new Bitrix24Portal(store, cipher, rest, oauth, now);
+  // Respeita o limite de chamadas do Bitrix24 (ritmo + nova tentativa); nos testes, sem esperas.
+  const portal = new Bitrix24Portal(
+    store,
+    cipher,
+    rest,
+    oauth,
+    now,
+    env.NODE_ENV === "test" ? NO_PACING : BITRIX24_PACING,
+  );
   const crm = new CrmReader(portal);
   const hierarchy = new HierarchyResolver(portal);
   const assistantBot =
@@ -131,7 +142,16 @@ export async function buildApp(env: Env, deps: AppDeps = {}): Promise<FastifyIns
       : env.AI_PROVIDER === "anthropic"
         ? new AnthropicProvider(env.AI_MODEL, env.ANTHROPIC_API_KEY)
         : null;
-  const assistant = new AssistantService(store, llm, env.AI_REDACT_CLIENT_NAMES, now);
+  // Ações do assistente no CRM (mover etapa, preencher campo): só com confirmação do colaborador.
+  const actions = new AssistantActions({
+    store,
+    call: (tenant, method, params) => portal.call(tenant, method, params),
+    catalog: (tenant) => crm.catalog(tenant),
+    onChanged: (tenant, dealId) => engine.syncDeal(tenant, dealId),
+    log: app.log,
+    now,
+  });
+  const assistant = new AssistantService(store, llm, env.AI_REDACT_CLIENT_NAMES, now, actions);
   const verifier = new PortalEventVerifier(
     store,
     env.BITRIX24_ALLOWED_DOMAINS,

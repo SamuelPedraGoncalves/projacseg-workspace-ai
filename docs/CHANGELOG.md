@@ -2,6 +2,44 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
+## [0.9.0] — 18/11/2026 — Assistente age no CRM pelo chat
+
+### Adicionado
+
+- Ferramentas da IA `mover_etapa` e `preencher_campo` (proposta), com autorização no servidor,
+  confirmação SIM/NÃO, comentário no card e registro em `AssistantAction` (migração aditiva
+  `20261118000000_assistant_actions`, não revisada para produção).
+- Seção `assistant` na configuração da empresa; ligada no piloto da ProjacSeg.
+- Metadados dos campos do negócio (rótulo, tipo, opções) no catálogo do CRM.
+- Ferramenta `descartar_negocio`: move para a etapa de perdido do funil com o motivo obrigatório
+  (opção do campo de motivo de perda); seção `assistant.discard` na configuração.
+
+### Alterado
+
+- Banco local de testes na porta 5544.
+- Mensagens do assistente no formato do chat do Bitrix24: negrito com [B], listas uma por linha,
+  opções numeradas, títulos de negócio limpos (sem barras), confirmações em blocos. Markdown que a IA
+  escreva é convertido.
+- Negócios citados pelo assistente viram link para o card (`[URL=…/crm/deal/details/<id>/]`), no
+  mesmo formato dos alertas do motor.
+- Dashboard: prazos de ação dizem "Prazo…" (nunca "vence"); renovações mostram a vigência
+  ("Vigência em 12 dias (30/11) · prazo …"). Seguro novo não aparece como vencendo. A IA recebe o tipo
+  de seguro e a regra de que vigência só importa em renovações. Piloto: Tipo de Seguro e Ramo mapeados.
+- Card do dashboard mostra a etapa atual e desde quando ("Cotação enviada / Negociação desde
+  10/11"); follow-up diz a última atividade que reiniciou a contagem. Renovação mostra a vigência no
+  card mesmo quando outra ação (follow-up, cotação) está em destaque. A data exibida vem do novo
+  `deadlineFrom.label` da regra ("Vigência", "Agendamento"); regra sem rótulo não mostra data. Etapa
+  sem rotina do comercial: "Nenhuma ação do comercial nesta etapa".
+- Bitrix24: chamadas espaçadas por portal (~1,8/s) e nova tentativa em QUERY_LIMIT_EXCEEDED.
+- Modo de observação no piloto (`pilot.viewAs`): o usuário do piloto vê no dashboard e no chat os
+  negócios de outro colaborador, só leitura, e recebe os alertas e o resumo dele marcados como
+  observação; o observado continua sem acesso e sem mensagens.
+- Memória curta da conversa (30 minutos, 10 mensagens, sem nomes de clientes): respostas como "2" ou
+  "sem retorno do cliente" completam a pergunta anterior.
+- Dashboard e IA não dizem mais "superior notificado" quando o aviso só foi registrado (sombra ou
+  piloto): o rótulo passa a ser "escalonamento registrado, superior não avisado".
+- Rotinas do piloto ativas para o usuário 13 (correção: a versão 0.8.0 as descrevia em sombra).
+
 ## [0.8.0] — 17/11/2026 — Secretário comercial, sprint 1 (sombra)
 
 ### Adicionado

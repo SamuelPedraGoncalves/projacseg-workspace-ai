@@ -3,8 +3,8 @@
  * pelo protocolo de rede em 127.0.0.1, com os dados gravados em disco (`data/private/pglite`, fora do
  * Git). Aplica as migrações versionadas que ainda não foram aplicadas.
  *
- * Uso: pnpm --filter @projacseg/api db:local   → DATABASE_URL do .env.example não muda (porta 5432),
- * mas use `postgresql://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable`.
+ * Uso: pnpm --filter @projacseg/api db:local e, no .env,
+ * `DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5544/postgres?sslmode=disable`.
  *
  * Não é para produção: um processo, poucas conexões, sem backup.
  */
@@ -16,7 +16,8 @@ import { resolve } from "node:path";
 const root = resolve(import.meta.dirname, "../../..");
 const dataDir = resolve(root, process.env.LOCAL_DB_DIR ?? "data/private/pglite");
 const migrationsDir = resolve(import.meta.dirname, "../prisma/migrations");
-const port = Number(process.env.LOCAL_DB_PORT ?? 5432);
+// Porta própria (não 5432) para não colidir com outro PostgreSQL desta máquina.
+const port = Number(process.env.LOCAL_DB_PORT ?? 5544);
 
 mkdirSync(dataDir, { recursive: true });
 const db = new PGlite(dataDir);

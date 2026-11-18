@@ -50,8 +50,30 @@ export class HttpBitrix24OAuthClient implements Bitrix24OAuthClient {
  * (criptografados). Renova o token quando expira. Usado pelo motor (sincronização, hierarquia,
  * mensagens do bot) — nunca exposto ao navegador.
  */
+export interface PortalPacing {
+  /** Intervalo mínimo entre chamadas do mesmo portal (o Bitrix24 aceita ~2 por segundo). */
+  minIntervalMs: number;
+  /** Esperas antes de repetir quando o portal pede calma (QUERY_LIMIT_EXCEEDED). */
+  retryDelaysMs: number[];
+  sleep: (ms: number) => Promise<void>;
+}
+
+const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/** Testes: sem espera nem nova tentativa. */
+export const NO_PACING: PortalPacing = { minIntervalMs: 0, retryDelaysMs: [], sleep: wait };
+/** Produção: ~1,8 chamada por segundo por portal; até 4 novas tentativas (1, 2, 4 e 8 s). */
+export const BITRIX24_PACING: PortalPacing = {
+  minIntervalMs: 550,
+  retryDelaysMs: [1000, 2000, 4000, 8000],
+  sleep: wait,
+};
+
 export class Bitrix24Portal {
   private readonly refreshing = new Map<string, Promise<TenantRecord>>();
+  /** Fila por portal: as chamadas saem uma de cada vez, com o intervalo mínimo entre elas. */
+  private readonly lanes = new Map<string, Promise<unknown>>();
+  private readonly lastCallAt = new Map<string, number>();
 
   constructor(
     private readonly store: Store,
@@ -59,7 +81,37 @@ export class Bitrix24Portal {
     private readonly rest: Bitrix24RestClient,
     private readonly oauth: Bitrix24OAuthClient | null,
     private readonly now: () => Date = () => new Date(),
+    private readonly pacing: PortalPacing = NO_PACING,
   ) {}
+
+  /** Executa `task` na fila do portal, respeitando o ritmo e repetindo quando o portal pede calma. */
+  private paced<T>(tenantId: string, task: () => Promise<T>): Promise<T> {
+    const run = async (): Promise<T> => {
+      for (let attempt = 0; ; attempt += 1) {
+        const since = Date.now() - (this.lastCallAt.get(tenantId) ?? 0);
+        if (since < this.pacing.minIntervalMs)
+          await this.pacing.sleep(this.pacing.minIntervalMs - since);
+        this.lastCallAt.set(tenantId, Date.now());
+        try {
+          return await task();
+        } catch (error) {
+          const delay = this.pacing.retryDelaysMs[attempt];
+          if (!(error instanceof Bitrix24ApiError && error.isRateLimited) || delay === undefined) {
+            throw error;
+          }
+          await this.pacing.sleep(delay);
+        }
+      }
+    };
+    const previous = this.lanes.get(tenantId) ?? Promise.resolve();
+    const current = previous.then(run, run);
+    // A fila segue mesmo se esta chamada falhar.
+    this.lanes.set(
+      tenantId,
+      current.catch(() => undefined),
+    );
+    return current;
+  }
 
   async saveTokens(tenant: TenantRecord, tokens: OAuthTokens): Promise<TenantRecord> {
     return this.store.tenants.update(tenant.id, {
@@ -96,21 +148,26 @@ export class Bitrix24Portal {
       !tenant.tokenExpiresAt || tenant.tokenExpiresAt.getTime() - this.now().getTime() < 60_000;
     if (expiresSoon && tenant.refreshTokenEnc && this.oauth) tenant = await this.refresh(tenant);
 
+    const current = tenant;
     try {
-      return await this.rest.call<T>(
-        tenant.clientEndpoint,
-        method,
-        params,
-        this.cipher.decrypt(tenant.accessTokenEnc!),
+      return await this.paced(current.id, () =>
+        this.rest.call<T>(
+          current.clientEndpoint,
+          method,
+          params,
+          this.cipher.decrypt(current.accessTokenEnc!),
+        ),
       );
     } catch (error) {
       if (error instanceof Bitrix24ApiError && error.isExpiredToken && this.oauth) {
-        const renewed = await this.refresh(tenant);
-        return this.rest.call<T>(
-          renewed.clientEndpoint,
-          method,
-          params,
-          this.cipher.decrypt(renewed.accessTokenEnc!),
+        const renewed = await this.refresh(current);
+        return this.paced(renewed.id, () =>
+          this.rest.call<T>(
+            renewed.clientEndpoint,
+            method,
+            params,
+            this.cipher.decrypt(renewed.accessTokenEnc!),
+          ),
         );
       }
       throw error;

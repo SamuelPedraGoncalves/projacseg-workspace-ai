@@ -2,7 +2,7 @@ import type { JourneyResponse } from "@projacseg/shared";
 import type { FastifyInstance } from "fastify";
 import { sessionFromRequest, type SessionSigner } from "../../security/session";
 import type { Store } from "../../store/types";
-import { inPilot } from "../tenants/pilot";
+import { inPilot, subjectOf } from "../tenants/pilot";
 import { buildJourney } from "./journey.service";
 
 /**
@@ -25,7 +25,13 @@ export async function journeyRoutes(
     }
 
     const generatedAt = now();
-    const journey = await buildJourney(options.store, tenant, session.userId, generatedAt);
+    // No modo de observação, o usuário do piloto vê os negócios do colaborador observado.
+    const journey = await buildJourney(
+      options.store,
+      tenant,
+      subjectOf(tenant, session.userId),
+      generatedAt,
+    );
     const response: JourneyResponse = { ...journey, generatedAt: generatedAt.toISOString() };
     return reply.header("Cache-Control", "no-store").send(response);
   });
@@ -43,7 +49,7 @@ export async function journeyRoutes(
           .send({ error: "Workspace em piloto: indisponível para este usuário" });
       }
       const deal = await options.store.deals.get(session.tenantId, request.params.dealId);
-      if (!deal || (!session.admin && deal.assignedById !== session.userId)) {
+      if (!deal || (!session.admin && deal.assignedById !== subjectOf(tenant, session.userId))) {
         return reply.code(404).send({ error: "Negócio não encontrado" });
       }
       const occurrences = await options.store.occurrences.listForDeals(
