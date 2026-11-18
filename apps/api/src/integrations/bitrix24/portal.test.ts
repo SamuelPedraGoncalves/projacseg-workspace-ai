@@ -157,4 +157,25 @@ describe("CrmReader.toSnapshot", () => {
       UF_CRM_AUSENTE: [],
     });
   });
+
+  it("campos de data ficam só com o dia (o Bitrix24 manda meia-noite UTC)", () => {
+    const types = new Map([
+      ["UF_CRM_VIGENCIA", "date"],
+      ["LAST_ACTIVITY_TIME", "datetime"],
+    ]);
+    expect(
+      pickFields(
+        {
+          ID: "1",
+          UF_CRM_VIGENCIA: "2025-09-09T03:00:00+03:00",
+          LAST_ACTIVITY_TIME: "2026-10-30T15:05:43+03:00",
+        },
+        ["UF_CRM_VIGENCIA", "LAST_ACTIVITY_TIME"],
+        types,
+      ),
+    ).toEqual({
+      UF_CRM_VIGENCIA: ["2025-09-09"],
+      LAST_ACTIVITY_TIME: ["2026-10-30T15:05:43+03:00"],
+    });
+  });
 });

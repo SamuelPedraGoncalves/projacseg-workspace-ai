@@ -27,19 +27,32 @@ Pacote `packages/engine` (puro, determinístico, sem IA nem rede) + orquestraç�
 Definido e validado em `packages/engine/src/rules.ts`; configurado em `apps/api/tenants/<domínio>.json`
 (ver o README da pasta). Resumo:
 
-| Campo               | Para quê                                                                                                                                                                       |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `mode`              | `shadow` (padrão): calcula, mostra no dashboard e registra `notification_suppressed` no histórico, **sem enviar mensagens**. `active`: envia alertas e escalonamentos pelo bot |
-| `conditions`        | Condições sobre campos do negócio (`equals`, `not_equals`, `in`, `empty`, `not_empty`). Campos de lista comparam o **ID do item**                                              |
-| `deadlineFrom`      | Conta o prazo a partir de uma data do negócio, `before` ou `after`. Sem a data preenchida, a ocorrência não abre                                                               |
-| `completeWhen`      | Conclui a ocorrência quando as condições valem (ex.: "Número do cálculo" preenchido); se já valem na entrada da etapa, nada é aberto                                           |
-| `responsible`       | `assignee` (padrão), `role` (papel da empresa) ou `field` (campo de usuário; vazio → responsável do negócio)                                                                   |
-| `escalation.levels` | Destinatários de cada nível: `superior` (organograma) e/ou `roles`. Sem a lista, cada nível vai ao superior                                                                    |
+| Campo                   | Para quê                                                                                                                                                                       |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `mode`                  | `shadow` (padrão): calcula, mostra no dashboard e registra `notification_suppressed` no histórico, **sem enviar mensagens**. `active`: envia alertas e escalonamentos pelo bot |
+| `conditions`            | Condições sobre campos do negócio (`equals`, `not_equals`, `in`, `empty`, `not_empty`). Campos de lista comparam o **ID do item**                                              |
+| `deadlineFrom`          | Conta o prazo a partir de uma data do negócio, `before` ou `after`. Sem a data preenchida, a ocorrência não abre                                                               |
+| `completeWhen`          | Conclui a ocorrência quando as condições valem (ex.: "Número do cálculo" preenchido); se já valem na entrada da etapa, nada é aberto                                           |
+| `responsible`           | `assignee` (padrão), `role` (papel da empresa) ou `field` (campo de usuário; vazio → responsável do negócio)                                                                   |
+| `keepAcrossStages`      | Uma ocorrência acompanha o negócio por todas as etapas da regra (radar de vigência); só sai quando ele deixa essas etapas                                                      |
+| `restartOn`             | Ciclo que recomeça a cada atividade real (`LAST_ACTIVITY_TIME`): a atividade nova conclui a ocorrência (`activity`) e abre a próxima (follow-up)                               |
+| `riskBefore`            | Risco a partir de um tempo fixo antes do vencimento (no lugar da fração `riskAtRatio`)                                                                                         |
+| `escalation.firstAfter` | Primeiro escalonamento só depois deste tempo vencido (ex.: faixa crítica do radar)                                                                                             |
+| `escalation.levels`     | Destinatários de cada nível: `superior` (organograma) e/ou `roles`. Sem a lista, cada nível vai ao superior                                                                    |
 
 Decisões que protegem a regra "o comercial não adia nem cancela" (D-039): condições e data de
 referência são lidas **só na abertura**; editar um campo depois não encerra nem adia a ocorrência. As
 saídas continuam sendo: mudar de etapa, fechar o negócio, cumprir `completeWhen` ou a regra ser
 desativada pela configuração.
+
+## Rotinas do secretário (sprint 1, piloto)
+
+As rotinas são regras do motor configuradas em `apps/api/tenants/projacseg.bitrix24.com.br.json`, todas
+`homologated: false` e em **sombra**: radar de vigência das renovações, primeiro contato do seguro novo,
+cotações (24 h, 48 h e Demais Ramos), follow-up (2 ou 5 dias úteis, reiniciado por atividade),
+pendência da seguradora e lembrete de prospecção — 11 regras. Proposta e faixas no documento
+"Secretário comercial — rotinas por etapa". Para aplicar mudanças no arquivo sem reinstalar:
+`pnpm --filter @projacseg/api tenants:reload` e reinicie o servidor.
 
 ## Regras fundamentais (inegociáveis)
 

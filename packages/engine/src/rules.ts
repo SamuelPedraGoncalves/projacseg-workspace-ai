@@ -64,6 +64,18 @@ export const ruleDefinitionSchema = z
     categoryIds: z.array(z.string()).nullable(),
     /** Etapas (STAGE_ID) que disparam a regra. */
     stageIds: z.array(z.string()).min(1),
+    /**
+     * `true`: uma única ocorrência acompanha o negócio enquanto ele estiver em **qualquer** das
+     * etapas da regra (ex.: radar de vigência da entrada à negociação). Mudar entre essas etapas não
+     * encerra nem reinicia o prazo; sair delas, sim.
+     */
+    keepAcrossStages: z.boolean().optional(),
+    /**
+     * Ciclo que recomeça a cada atividade real registrada (ex.: follow-up): o prazo conta da data
+     * mais recente entre a entrada na etapa e o campo informado (`LAST_ACTIVITY_TIME`). Uma
+     * atividade nova conclui a ocorrência atual e abre a próxima.
+     */
+    restartOn: z.object({ field: fieldCode }).optional(),
     /** Todas precisam valer **na abertura**; mudanças depois não encerram a ocorrência. */
     conditions: z.array(fieldConditionSchema).optional(),
     /** Próxima ação mostrada ao colaborador. */
@@ -82,11 +94,15 @@ export const ruleDefinitionSchema = z
     responsible: responsibleSchema.optional(),
     /** Fração do prazo a partir da qual a ocorrência entra em risco (0.75 = 75% do tempo). */
     riskAtRatio: z.number().gt(0).lt(1),
+    /** Risco a partir de um tempo fixo antes do vencimento (substitui `riskAtRatio`). */
+    riskBefore: durationSchema.optional(),
     escalation: z.object({
       /** Quantos níveis acima (0 = não escalona). */
       maxLevels: z.number().int().min(0).max(5),
       /** Intervalo entre níveis, contado a partir do vencimento. */
       interval: durationSchema,
+      /** Primeiro nível só depois deste tempo vencido (padrão: no vencimento). */
+      firstAfter: durationSchema.optional(),
       /** Destinatários por nível; sem esta lista, cada nível vai ao superior no organograma. */
       levels: z.array(escalationLevelSchema).optional(),
     }),
@@ -148,6 +164,7 @@ export function ruleFieldNames(rules: readonly RuleDefinition[]): string[] {
       names.add(condition.field);
     }
     if (rule.deadlineFrom) names.add(rule.deadlineFrom.field);
+    if (rule.restartOn) names.add(rule.restartOn.field);
     if (rule.responsible?.from === "field") names.add(rule.responsible.field);
   }
   return [...names].sort();

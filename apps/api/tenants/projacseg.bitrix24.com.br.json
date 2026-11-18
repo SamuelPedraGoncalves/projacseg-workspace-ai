@@ -6,8 +6,347 @@
     "workEnd": "18:00",
     "holidays": ["2026-11-20", "2026-12-25", "2027-01-01"]
   },
-  "digestTime": null,
-  "aiEnabled": false,
-  "pilot": { "userIds": ["13"] },
-  "rules": []
+  "digestTime": "09:00",
+  "aiEnabled": true,
+  "pilot": {
+    "userIds": ["13"]
+  },
+  "rules": [
+    {
+      "code": "radar_renovacao",
+      "name": "Radar de vigência das renovações",
+      "enabled": true,
+      "homologated": false,
+      "mode": "active",
+      "categoryIds": ["0", "1"],
+      "stageIds": ["NEW", "UC_YI2RCB", "UC_IYS6WC", "C1:NEW", "C1:EXECUTING", "C1:UC_YDJH2K"],
+      "keepAcrossStages": true,
+      "conditions": [
+        {
+          "field": "UF_CRM_1737579242776",
+          "operator": "in",
+          "values": ["9831", "11123"]
+        }
+      ],
+      "action": "Renovação: cotar e negociar antes do início da vigência",
+      "kind": "action",
+      "deadline": {
+        "amount": 10,
+        "unit": "business_days"
+      },
+      "deadlineFrom": {
+        "field": "UF_CRM_1675339617",
+        "direction": "before"
+      },
+      "riskAtRatio": 0.5,
+      "riskBefore": {
+        "amount": 5,
+        "unit": "business_days"
+      },
+      "escalation": {
+        "maxLevels": 2,
+        "interval": {
+          "amount": 5,
+          "unit": "business_days"
+        },
+        "firstAfter": {
+          "amount": 5,
+          "unit": "business_days"
+        }
+      }
+    },
+    {
+      "code": "contato_novo_auto",
+      "name": "Primeiro contato — seguro novo (Automóvel)",
+      "enabled": true,
+      "homologated": false,
+      "mode": "active",
+      "categoryIds": ["0"],
+      "stageIds": ["NEW"],
+      "conditions": [
+        {
+          "field": "UF_CRM_1737579242776",
+          "operator": "in",
+          "values": ["9829", "9831"]
+        }
+      ],
+      "action": "Fazer o primeiro contato com o cliente",
+      "kind": "action",
+      "deadline": {
+        "amount": 3,
+        "unit": "business_hours"
+      },
+      "riskAtRatio": 0.66,
+      "escalation": {
+        "maxLevels": 0,
+        "interval": {
+          "amount": 1,
+          "unit": "business_days"
+        }
+      }
+    },
+    {
+      "code": "contato_novo_dr",
+      "name": "Primeiro contato — seguro novo (Demais Ramos)",
+      "enabled": true,
+      "homologated": false,
+      "mode": "active",
+      "categoryIds": ["1"],
+      "stageIds": ["C1:NEW"],
+      "conditions": [
+        {
+          "field": "UF_CRM_1737579242776",
+          "operator": "in",
+          "values": ["9829", "9831"]
+        }
+      ],
+      "action": "Fazer o primeiro contato com o cliente",
+      "kind": "action",
+      "deadline": {
+        "amount": 1,
+        "unit": "business_hours"
+      },
+      "riskAtRatio": 0.5,
+      "escalation": {
+        "maxLevels": 0,
+        "interval": {
+          "amount": 1,
+          "unit": "business_days"
+        }
+      }
+    },
+    {
+      "code": "cotacao_24h",
+      "name": "Cotação em 24h (Automóvel)",
+      "enabled": true,
+      "homologated": false,
+      "mode": "active",
+      "categoryIds": ["0"],
+      "stageIds": ["UC_YI2RCB"],
+      "conditions": [
+        {
+          "field": "UF_CRM_1737579242776",
+          "operator": "not_equals",
+          "value": "11123"
+        }
+      ],
+      "action": "Enviar a cotação ao cliente",
+      "kind": "action",
+      "deadline": {
+        "amount": 1,
+        "unit": "business_days"
+      },
+      "riskAtRatio": 0.75,
+      "escalation": {
+        "maxLevels": 1,
+        "interval": {
+          "amount": 1,
+          "unit": "business_days"
+        }
+      }
+    },
+    {
+      "code": "cotacao_48h",
+      "name": "Cotação em 48h — renovação própria (Automóvel)",
+      "enabled": true,
+      "homologated": false,
+      "mode": "active",
+      "categoryIds": ["0"],
+      "stageIds": ["UC_YI2RCB"],
+      "conditions": [
+        {
+          "field": "UF_CRM_1737579242776",
+          "operator": "equals",
+          "value": "11123"
+        }
+      ],
+      "action": "Enviar a cotação de renovação ao cliente",
+      "kind": "action",
+      "deadline": {
+        "amount": 2,
+        "unit": "business_days"
+      },
+      "riskAtRatio": 0.75,
+      "escalation": {
+        "maxLevels": 1,
+        "interval": {
+          "amount": 1,
+          "unit": "business_days"
+        }
+      }
+    },
+    {
+      "code": "cotacao_dr",
+      "name": "Cotações em 3 horas úteis (Demais Ramos)",
+      "enabled": true,
+      "homologated": false,
+      "mode": "active",
+      "categoryIds": ["1"],
+      "stageIds": ["C1:EXECUTING"],
+      "action": "Elaborar e enviar as cotações",
+      "kind": "action",
+      "deadline": {
+        "amount": 3,
+        "unit": "business_hours"
+      },
+      "riskAtRatio": 0.66,
+      "escalation": {
+        "maxLevels": 1,
+        "interval": {
+          "amount": 1,
+          "unit": "business_days"
+        }
+      }
+    },
+    {
+      "code": "follow_up_auto",
+      "name": "Follow-up a cada 2 dias úteis (Automóvel)",
+      "enabled": true,
+      "homologated": false,
+      "mode": "active",
+      "categoryIds": ["0"],
+      "stageIds": ["UC_IYS6WC"],
+      "restartOn": {
+        "field": "LAST_ACTIVITY_TIME"
+      },
+      "conditions": [
+        {
+          "field": "UF_CRM_1737579242776",
+          "operator": "not_equals",
+          "value": "11123"
+        }
+      ],
+      "action": "Fazer follow-up da negociação",
+      "kind": "action",
+      "deadline": {
+        "amount": 2,
+        "unit": "business_days"
+      },
+      "riskAtRatio": 0.75,
+      "escalation": {
+        "maxLevels": 1,
+        "interval": {
+          "amount": 1,
+          "unit": "business_days"
+        }
+      }
+    },
+    {
+      "code": "follow_up_auto_renovacao",
+      "name": "Follow-up a cada 5 dias úteis — renovação própria (Automóvel)",
+      "enabled": true,
+      "homologated": false,
+      "mode": "active",
+      "categoryIds": ["0"],
+      "stageIds": ["UC_IYS6WC"],
+      "restartOn": {
+        "field": "LAST_ACTIVITY_TIME"
+      },
+      "conditions": [
+        {
+          "field": "UF_CRM_1737579242776",
+          "operator": "equals",
+          "value": "11123"
+        }
+      ],
+      "action": "Fazer follow-up da renovação",
+      "kind": "action",
+      "deadline": {
+        "amount": 5,
+        "unit": "business_days"
+      },
+      "riskAtRatio": 0.75,
+      "escalation": {
+        "maxLevels": 1,
+        "interval": {
+          "amount": 1,
+          "unit": "business_days"
+        }
+      }
+    },
+    {
+      "code": "follow_up_dr",
+      "name": "Follow-up a cada 2 dias úteis (Demais Ramos)",
+      "enabled": true,
+      "homologated": false,
+      "mode": "active",
+      "categoryIds": ["1"],
+      "stageIds": ["C1:UC_YDJH2K"],
+      "restartOn": {
+        "field": "LAST_ACTIVITY_TIME"
+      },
+      "action": "Fazer follow-up da negociação",
+      "kind": "action",
+      "deadline": {
+        "amount": 2,
+        "unit": "business_days"
+      },
+      "riskAtRatio": 0.75,
+      "escalation": {
+        "maxLevels": 1,
+        "interval": {
+          "amount": 1,
+          "unit": "business_days"
+        }
+      }
+    },
+    {
+      "code": "pendencia_seguradora",
+      "name": "Pendência da seguradora",
+      "enabled": true,
+      "homologated": false,
+      "mode": "active",
+      "categoryIds": ["0", "1"],
+      "stageIds": ["UC_LJGF76", "C1:FINAL_INVOICE"],
+      "action": "Resolver a pendência da seguradora",
+      "kind": "action",
+      "deadline": {
+        "amount": 2,
+        "unit": "business_days"
+      },
+      "riskAtRatio": 0.5,
+      "escalation": {
+        "maxLevels": 2,
+        "interval": {
+          "amount": 5,
+          "unit": "business_days"
+        },
+        "firstAfter": {
+          "amount": 3,
+          "unit": "business_days"
+        }
+      }
+    },
+    {
+      "code": "lembrete_prospeccao",
+      "name": "Lembrete de prospecção na data combinada",
+      "enabled": true,
+      "homologated": false,
+      "mode": "active",
+      "categoryIds": ["0"],
+      "stageIds": ["UC_130IYL"],
+      "action": "Retomar o contato agendado com o cliente",
+      "kind": "action",
+      "deadline": {
+        "amount": 0,
+        "unit": "business_days"
+      },
+      "deadlineFrom": {
+        "field": "UF_CRM_1713373223614",
+        "direction": "after"
+      },
+      "riskAtRatio": 0.5,
+      "riskBefore": {
+        "amount": 10,
+        "unit": "business_hours"
+      },
+      "escalation": {
+        "maxLevels": 0,
+        "interval": {
+          "amount": 1,
+          "unit": "business_days"
+        }
+      }
+    }
+  ]
 }

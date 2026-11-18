@@ -12,15 +12,15 @@ pnpm build         # build de produção
 
 ## Cobertura atual (17/11/2026)
 
-| Pacote                     | Testes | O que cobre                                                                                                                                                                                                                                             |
-| -------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `packages/theme`           | 44     | Cores, paleta de 5 tons, tokens, persistência isolada por colaborador                                                                                                                                                                                   |
-| `packages/shared`          | 7      | Schemas e filtros das visões                                                                                                                                                                                                                            |
-| `packages/engine`          | 56     | Calendário útil (para frente e para trás), regras, condições por campo, prazo relativo a data, conclusão por campo, papéis, modo sombra, projeção do dashboard                                                                                          |
-| `apps/api`                 | 59     | Sessão, criptografia, instalação (com registro do bot v2), eventos `ONIMBOTV2*` (domínio, endpoint, token, chat privado × grupo), IA com mocks, motor ponta a ponta (sombra, papéis, conclusão por campo), PostgreSQL via PGlite com todas as migrações |
-| `apps/web`                 | 57     | Dashboard, filtros, temas, assistente, modo Bitrix24 (foto, card, chat via backend, instalação, proteções)                                                                                                                                              |
-| `tools/bitrix-automations` | 13     | Leitura segura de PHP serialize, `.bpt`, prazos, anonimização, inventário, consolidação                                                                                                                                                                 |
-| Playwright                 | 6      | Fluxos principais em desktop e mobile                                                                                                                                                                                                                   |
+| Pacote                     | Testes | O que cobre                                                                                                                                                                                                  |
+| -------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `packages/theme`           | 44     | Cores, paleta de 5 tons, tokens, persistência isolada por colaborador                                                                                                                                        |
+| `packages/shared`          | 7      | Schemas e filtros das visões                                                                                                                                                                                 |
+| `packages/engine`          | 64     | Calendário útil (para frente e para trás), regras, condições, prazo relativo a data, conclusão por campo, papéis, modo sombra, radar entre etapas, follow-up reiniciado por atividade, projeção do dashboard |
+| `apps/api`                 | 69     | Sessão, criptografia, instalação (navegador e notificação do servidor), bot v2, modo piloto, IA com mocks, motor ponta a ponta, campos de data, PostgreSQL via PGlite com todas as migrações                 |
+| `apps/web`                 | 58     | Dashboard, filtros, temas, assistente, modo Bitrix24 (foto, card, chat via backend, instalação, piloto)                                                                                                      |
+| `tools/bitrix-automations` | 13     | Leitura segura de PHP serialize, `.bpt`, prazos, anonimização, inventário, consolidação                                                                                                                      |
+| Playwright                 | 6      | Fluxos principais em desktop e mobile                                                                                                                                                                        |
 
 ## Regras
 

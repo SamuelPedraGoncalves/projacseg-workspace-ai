@@ -37,7 +37,13 @@ export interface OccurrenceState {
   escalationLevel: number;
 }
 
-export type ResolveReason = "stage_changed" | "deal_closed" | "rule_disabled" | "completed";
+export type ResolveReason =
+  | "stage_changed"
+  | "deal_closed"
+  | "rule_disabled"
+  | "completed"
+  /** Atividade nova registrada no negócio: o ciclo (ex.: follow-up) recomeça. */
+  | "activity";
 
 export type EngineCommand =
   | {
@@ -64,7 +70,9 @@ export function escalationDueAt(
   level: number,
   calendar: BusinessCalendar,
 ): Date {
-  let at = occurrence.dueAt;
+  let at = rule.escalation.firstAfter
+    ? addDuration(occurrence.dueAt, rule.escalation.firstAfter, calendar)
+    : occurrence.dueAt;
   for (let step = 1; step < level; step += 1)
     at = addDuration(at, rule.escalation.interval, calendar);
   return at;
@@ -85,13 +93,36 @@ export function responsibleFor(
   return deal.assignedById;
 }
 
-/** Vencimento da regra para a passagem atual pela etapa; `null` se a data de referência falta. */
+/**
+ * Início do ciclo da regra: a entrada na etapa ou, em regras com `restartOn`, a atividade mais recente
+ * registrada depois dela. É também a identidade da ocorrência (uma por regra por ciclo).
+ */
+export function cycleStart(
+  rule: RuleDefinition,
+  deal: DealState,
+  calendar: BusinessCalendar,
+): Date {
+  if (!rule.restartOn) return deal.stageEnteredAt;
+  const activity = parseFieldDate(deal.fields?.[rule.restartOn.field]?.[0], calendar);
+  return activity && activity > deal.stageEnteredAt ? activity : deal.stageEnteredAt;
+}
+
+/** A regra cobre a etapa e o pipeline atuais (sem olhar condições, lidas só na abertura). */
+function inScope(rule: RuleDefinition, deal: DealState): boolean {
+  return (
+    rule.stageIds.includes(deal.stageId) &&
+    (rule.categoryIds === null || rule.categoryIds.includes(deal.categoryId))
+  );
+}
+
+/** Vencimento da regra para o ciclo atual; `null` se a data de referência falta. */
 function dueDateFor(
   rule: RuleDefinition,
   deal: DealState,
   calendar: BusinessCalendar,
+  start: Date,
 ): Date | null {
-  if (!rule.deadlineFrom) return addDuration(deal.stageEnteredAt, rule.deadline, calendar);
+  if (!rule.deadlineFrom) return addDuration(start, rule.deadline, calendar);
   const anchor = parseFieldDate(deal.fields?.[rule.deadlineFrom.field]?.[0], calendar);
   if (!anchor) return null;
   return rule.deadlineFrom.direction === "after"
@@ -101,6 +132,26 @@ function dueDateFor(
 
 function sameInstant(a: Date, b: Date): boolean {
   return a.getTime() === b.getTime();
+}
+
+/** Por que uma ocorrência aberta deixou de valer (sem olhar a regra desativada nem a conclusão). */
+function closingReason(
+  occurrence: OccurrenceState,
+  rule: RuleDefinition | undefined,
+  deal: DealState,
+  calendar: BusinessCalendar,
+): ResolveReason | null {
+  if (deal.closed) return "deal_closed";
+  if (rule?.keepAcrossStages) return inScope(rule, deal) ? null : "stage_changed";
+  if (occurrence.stageId !== deal.stageId) return "stage_changed";
+  if (rule?.restartOn) {
+    // Reentrou na etapa depois da abertura → nova passagem; atividade nova → novo ciclo.
+    if (deal.stageEnteredAt > occurrence.stageEnteredAt) return "stage_changed";
+    return sameInstant(occurrence.stageEnteredAt, cycleStart(rule, deal, calendar))
+      ? null
+      : "activity";
+  }
+  return sameInstant(occurrence.stageEnteredAt, deal.stageEnteredAt) ? null : "stage_changed";
 }
 
 /**
@@ -130,13 +181,9 @@ export function evaluateDeal(
   const stillOpen: OccurrenceState[] = [];
   for (const occurrence of open) {
     const rule = rulesByCode.get(occurrence.ruleCode);
-    if (deal.closed) {
-      commands.push({ type: "resolve", occurrenceId: occurrence.id, reason: "deal_closed" });
-    } else if (
-      occurrence.stageId !== deal.stageId ||
-      !sameInstant(occurrence.stageEnteredAt, deal.stageEnteredAt)
-    ) {
-      commands.push({ type: "resolve", occurrenceId: occurrence.id, reason: "stage_changed" });
+    const reason = closingReason(occurrence, rule, deal, calendar);
+    if (reason) {
+      commands.push({ type: "resolve", occurrenceId: occurrence.id, reason });
     } else if (!rule || !rule.enabled) {
       commands.push({ type: "resolve", occurrenceId: occurrence.id, reason: "rule_disabled" });
     } else if (rule.completeWhen && conditionsHold(rule.completeWhen, fields)) {
@@ -153,19 +200,28 @@ export function evaluateDeal(
     if (stillOpen.some((item) => item.ruleCode === rule.code)) continue;
     // Já cumprida ao entrar na etapa: nada a cobrar.
     if (rule.completeWhen && conditionsHold(rule.completeWhen, fields)) continue;
-    const dueAt = dueDateFor(rule, deal, calendar);
+    const openedAt = cycleStart(rule, deal, calendar);
+    const dueAt = dueDateFor(rule, deal, calendar, openedAt);
     if (!dueAt) continue;
-    const openedAt = deal.stageEnteredAt;
     const span = Math.max(0, dueAt.getTime() - openedAt.getTime());
-    const riskAt = new Date(
-      Math.min(dueAt.getTime(), openedAt.getTime() + span * rule.riskAtRatio),
-    );
+    const riskAt = rule.riskBefore
+      ? new Date(
+          Math.min(
+            dueAt.getTime(),
+            Math.max(
+              openedAt.getTime(),
+              subtractDuration(dueAt, rule.riskBefore, calendar).getTime(),
+            ),
+          ),
+        )
+      : new Date(Math.min(dueAt.getTime(), openedAt.getTime() + span * rule.riskAtRatio));
     commands.push({
       type: "open",
       ruleCode: rule.code,
       dealId: deal.dealId,
       stageId: deal.stageId,
-      stageEnteredAt: deal.stageEnteredAt,
+      // Identidade do ciclo: entrada na etapa ou a última atividade (restartOn).
+      stageEnteredAt: openedAt,
       responsibleId: responsibleFor(rule, deal, context),
       openedAt,
       dueAt,

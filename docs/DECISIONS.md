@@ -256,3 +256,22 @@ inicial nativa; o uso contínuo vem do bot (alertas e resumo) e da utilidade da 
 O portal chamou o caminho de instalação pelo servidor (`ONAPPINSTALL`, bloco `auth`), não pelo
 navegador. Os dois formatos são aceitos, com as mesmas verificações (domínio autorizado, token do
 próprio aplicativo conferido no portal, administrador).
+
+## D-046 — Rotinas do secretário são regras configuradas, não código
+
+Cada rotina (radar de vigência, cotação, follow-up, pendência, prospecção) é uma regra do motor no arquivo
+da empresa. Isso mantém o produto reaproveitável em outros portais: pipelines, etapas, campos e prazos
+mudam por configuração.
+
+## D-047 — Follow-up recomeça com atividade real
+
+Nas regras com `restartOn`, uma atividade registrada no negócio (`LAST_ACTIVITY_TIME`) conclui o ciclo e
+abre o próximo. Diferente de editar uma data (D-039), registrar uma atividade é trabalho feito com o
+cliente. A confirmar no modo sombra: se tarefas criadas por robôs também mudam `LAST_ACTIVITY_TIME`, o
+follow-up seria reiniciado sem contato real.
+
+## D-048 — Campos de data lidos como dia, não como horário
+
+O Bitrix24 devolve campos do tipo data como meia-noite UTC (`2025-09-09T03:00:00+03:00`), que em
+Brasília cairia no dia anterior. O leitor do CRM guarda só a data (`2025-09-09`) para campos que o
+portal declara como `date`; campos `datetime` ficam com a hora.

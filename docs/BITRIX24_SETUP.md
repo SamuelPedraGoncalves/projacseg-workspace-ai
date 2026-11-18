@@ -148,6 +148,9 @@ de acesso (decisão D-044).
 
 ## Quando a URL mudar
 
+O túnel rápido pode cair e voltar com outro endereço (aconteceu em 17/11/2026). Para testes longos, use um
+túnel nomeado (endereço fixo, conta Cloudflare) ou um servidor com domínio próprio.
+
 Com túnel rápido, a URL muda a cada execução: atualize os caminhos no aplicativo local e use
 **Reinstalar** (o bot e os eventos passam a apontar para a URL nova).
 

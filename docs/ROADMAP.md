@@ -17,7 +17,13 @@ Status por etapa (legenda em [PROJECT.md](PROJECT.md)).
 | 11  | Produção                                      | Somente com autorização expressa                                                                                     |
 | 12  | Produto comercial (multiempresa, Marketplace) | Planejado                                                                                                            |
 
-## Sprint atual — "Integração confiável e motor em sombra"
+## Secretário comercial — sprint 1 (17/11/2026)
+
+Seis rotinas em sombra no piloto (usuário 13): radar de vigência, primeiro contato, cotações, follow-up,
+pendência da seguradora, prospecção. Próximos: conversa e campos faltando (2), Demais Ramos com REPEx e
+emissão (3), transição dos robôs (4), conferência final no Teleport (5).
+
+## Sprint anterior — "Integração confiável e motor em sombra"
 
 Andamento em 17/11/2026: itens 1, 2 e 3 **testados localmente** (aguardando portal de testes); 4, 5 e 6
 pendentes de insumos.

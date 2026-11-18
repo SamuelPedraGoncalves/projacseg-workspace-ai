@@ -20,6 +20,8 @@ export interface CrmCatalog {
   stages: Map<string, string>;
   /** Valores de campos de lista: campo → (ID do item → texto). */
   enums: Map<string, Map<string, string>>;
+  /** Tipo de cada campo do negócio (crm.deal.fields): `date`, `datetime`, `enumeration`… */
+  fieldTypes: Map<string, string>;
 }
 
 interface FieldMeta {
@@ -124,15 +126,16 @@ export class CrmReader {
 
     const enums = new Map<string, Map<string, string>>();
     const mapped = Object.values(tenant.config.fieldMapping).filter(Boolean) as string[];
-    if (mapped.length > 0) {
-      const fields = await this.portal.call<Record<string, FieldMeta>>(tenant, "crm.deal.fields");
-      for (const name of mapped) {
-        const items = fields.result[name]?.items;
-        if (items) enums.set(name, new Map(items.map((item) => [String(item.ID), item.VALUE])));
-      }
+    const fields = await this.portal.call<Record<string, FieldMeta>>(tenant, "crm.deal.fields");
+    const fieldTypes = new Map(
+      Object.entries(fields.result ?? {}).map(([name, meta]) => [name, meta.type ?? ""]),
+    );
+    for (const name of mapped) {
+      const items = fields.result?.[name]?.items;
+      if (items) enums.set(name, new Map(items.map((item) => [String(item.ID), item.VALUE])));
     }
 
-    const catalog = { categories, stages, enums };
+    const catalog = { categories, stages, enums, fieldTypes };
     this.catalogs.set(tenant.id, { at: Date.now(), catalog });
     return catalog;
   }
@@ -183,22 +186,36 @@ export class CrmReader {
       responsibleName: assignedById ? await this.userName(tenant, assignedById) : "Sem responsável",
       ...(branch ? { branch } : {}),
       ...(insuranceType ? { insuranceType } : {}),
-      ...(ruleFields.length > 0 ? { fields: pickFields(raw, ruleFields) } : {}),
+      ...(ruleFields.length > 0 ? { fields: pickFields(raw, ruleFields, catalog.fieldTypes) } : {}),
       closed: raw.CLOSED === "Y",
     };
   }
 }
 
 /**
- * Valores crus dos campos usados pelas regras: listas guardam o ID do item, datas o texto ISO do
- * Bitrix24. Objetos (arquivos, endereços) são ignorados — regras não os usam.
+ * Valores crus dos campos usados pelas regras: listas guardam o ID do item; datas e horários, o texto
+ * ISO do Bitrix24. Objetos (arquivos, endereços) são ignorados — regras não os usam.
+ *
+ * Campos do tipo **data** (sem hora) chegam como meia-noite UTC (`2025-09-09T03:00:00+03:00`), que em
+ * Brasília cairia no dia anterior: ficam só com a data (`2025-09-09`), lida como dia local da empresa.
  */
-export function pickFields(raw: RawDeal, names: readonly string[]): Record<string, string[]> {
+export function pickFields(
+  raw: RawDeal,
+  names: readonly string[],
+  fieldTypes: ReadonlyMap<string, string> = new Map(),
+): Record<string, string[]> {
   const toValues = (value: unknown): string[] => {
     if (value === undefined || value === null || value === "" || value === false) return [];
     if (Array.isArray(value)) return value.flatMap(toValues);
     if (typeof value === "object") return [];
     return [String(value)];
   };
-  return Object.fromEntries(names.map((name) => [name, toValues(raw[name])]));
+  const dateOnly = (value: string) =>
+    /^\d{4}-\d{2}-\d{2}/.test(value) ? value.slice(0, 10) : value;
+  return Object.fromEntries(
+    names.map((name) => {
+      const values = toValues(raw[name]);
+      return [name, fieldTypes.get(name) === "date" ? values.map(dateOnly) : values];
+    }),
+  );
 }

@@ -15,6 +15,10 @@ Cada portal Bitrix24 tem um arquivo `<domínio>.json` nesta pasta (ex.:
 Os IDs de usuário ficam **só aqui**, na configuração da empresa — nunca no código. Um papel citado
 por uma regra e ausente em `roles` impede o carregamento do arquivo (erro na instalação).
 
+Para recarregar o arquivo de uma empresa já instalada sem reinstalar no portal:
+`pnpm --filter @projacseg/api tenants:reload` e reinicie o servidor (a sincronização completa roda na
+partida).
+
 ## Modo sombra
 
 Toda regra sem `"mode"` roda em **sombra**: o motor calcula prazos, risco, atraso e escalonamento,

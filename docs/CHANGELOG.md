@@ -2,6 +2,19 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
+## [0.8.0] — 17/11/2026 — Secretário comercial, sprint 1 (sombra)
+
+### Adicionado
+
+- Motor: `keepAcrossStages`, `restartOn` (motivo de encerramento `activity`), `riskBefore` e
+  `escalation.firstAfter`.
+- 11 regras de rotina do secretário no piloto da ProjacSeg, em sombra e não homologadas.
+- `tenants:reload`: recarrega a configuração da empresa sem reinstalar.
+
+### Corrigido
+
+- Campos de data do Bitrix24 lidos como dia local (antes, um dia antes em Brasília).
+
 ## [0.7.0] — 17/11/2026 — Primeira instalação no portal (modo piloto)
 
 ### Adicionado
