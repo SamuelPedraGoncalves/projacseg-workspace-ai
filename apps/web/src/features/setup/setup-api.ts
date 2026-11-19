@@ -53,6 +53,7 @@ export function createSetupApi(session: string, baseUrl = "") {
     acceptTerms: (version: string) => request<{ ok: true }>("POST", "/terms/accept", { version }),
     privacyNotice: () => request<TermsDocument>("GET", "/privacy-notice"),
     markPrivacyNoticeSeen: () => request<{ ok: true }>("POST", "/privacy-notice/seen"),
+    claimAdmin: () => request<{ ok: true }>("POST", "/claim-admin"),
     editors: () => request<{ editors: PortalUserRef[] }>("GET", "/editors"),
     saveEditors: (editors: PortalUserRef[]) =>
       request<{ ok: true }>("PUT", "/editors", { editors }),

@@ -585,3 +585,26 @@ describe("mapeamento: leitura do CRM e mapeamento já existente", () => {
     await app.close();
   });
 });
+
+describe("assumir a administração", () => {
+  it("a situação diz quando o usuário pode assumir: admin do portal, fora do piloto, sem ser o admin", async () => {
+    const { app, store } = await testApp();
+    const tenant = await setup(store);
+    const status = async (userId: string, portalAdmin: boolean) =>
+      (
+        await app.inject({
+          method: "GET",
+          url: "/api/v1/setup",
+          headers: bearer(tenant, userId, portalAdmin),
+        })
+      ).json().canClaimAdmin;
+
+    expect(await status("88", true)).toBe(true);
+    expect(await status("88", false)).toBe(false);
+    expect(await status(ADMIN, true)).toBe(false);
+
+    await store.tenants.update(tenant.id, { config: { ...tenant.config, pilotUserIds: ["88"] } });
+    expect(await status("88", true)).toBe(false);
+    await app.close();
+  });
+});

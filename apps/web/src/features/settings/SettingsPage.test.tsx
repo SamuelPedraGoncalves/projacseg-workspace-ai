@@ -13,6 +13,7 @@ function done(access: SetupStatus["access"]): SetupStatus {
     access,
     terms: { version: "v", provisional: true, accepted: true },
     privacyNoticePending: false,
+    canClaimAdmin: false,
   };
 }
 

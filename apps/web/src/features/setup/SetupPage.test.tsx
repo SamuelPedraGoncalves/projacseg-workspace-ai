@@ -21,6 +21,7 @@ function status(step: SetupStatus["step"], patch: Partial<SetupStatus> = {}): Se
     access: { admin, ruleEditor: admin, settings: admin },
     terms: { version: TERMS.version, provisional: true, accepted: step !== "terms" },
     privacyNoticePending: false,
+    canClaimAdmin: false,
     ...patch,
   };
 }
@@ -205,5 +206,41 @@ describe("mapeamento sem campos obrigatórios", () => {
         situations: { categoryIds: ["0"], newBusinessValues: ["1"], renewalValues: [] },
       }),
     );
+  });
+});
+
+describe("aguardando o administrador", () => {
+  it("administrador do portal pode assumir a administração", async () => {
+    let claimed = false;
+    const calls = fakeApi({
+      "GET /api/v1/setup": () => ({
+        body: claimed ? status("terms") : status("waiting_admin", { canClaimAdmin: true }),
+      }),
+      "GET /api/v1/setup/terms": () => ({ body: TERMS }),
+      "POST /api/v1/setup/claim-admin": () => {
+        claimed = true;
+        return { body: { ok: true } };
+      },
+    });
+    const user = userEvent.setup();
+    renderApp("/configurar", sessionPlatform());
+    await user.click(await screen.findByRole("button", { name: "Assumir a administração" }));
+    expect(await screen.findByText("Versão provisória")).toBeInTheDocument();
+    expect(calls.some((call) => call.url === "/api/v1/setup/claim-admin")).toBe(true);
+  });
+
+  it("sem poder assumir, não aparece o botão", async () => {
+    fakeApi({
+      "GET /api/v1/setup": () => ({ body: status("waiting_admin", { canClaimAdmin: false }) }),
+    });
+    renderApp("/configurar", sessionPlatform());
+    expect(
+      await screen.findByText(
+        "O administrador ainda está configurando o WorkSeg AI. Volte em breve.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Assumir a administração" }),
+    ).not.toBeInTheDocument();
   });
 });

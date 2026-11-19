@@ -19,6 +19,8 @@ export interface SetupStatus {
   terms: { version: string; provisional: boolean; accepted: boolean };
   /** O usuário ainda não viu o aviso curto de privacidade. */
   privacyNoticePending: boolean;
+  /** Administrador do portal Bitrix24 que pode assumir a administração do WorkSeg. */
+  canClaimAdmin: boolean;
 }
 
 /** Termos ou aviso. `body`: parágrafos separados por linha em branco. */

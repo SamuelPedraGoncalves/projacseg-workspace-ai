@@ -107,6 +107,7 @@ export async function setupRoutes(app: FastifyInstance, options: SetupRoutesOpti
       access: auth.access,
       terms: { version: terms.version, provisional: terms.provisional, accepted },
       privacyNoticePending: !auth.access.admin && notice?.version !== PRIVACY_NOTICE.version,
+      canClaimAdmin: auth.session.admin && !pilotUsers(auth.tenant) && !auth.access.admin,
     };
     return reply.header("Cache-Control", "no-store").send(status);
   });

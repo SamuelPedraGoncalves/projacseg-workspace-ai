@@ -189,12 +189,35 @@ function MappingStep({ api }: { api: SetupApi }) {
   );
 }
 
-function WaitingAdmin() {
+function WaitingAdmin({ api, canClaim }: { api: SetupApi; canClaim: boolean }) {
+  const advance = useAdvance();
+  const claim = useMutation({ mutationFn: () => api.claimAdmin(), onSuccess: advance });
   return (
     <SetupCard title="WorkSeg AI">
       <p className="text-center text-[15px]">
         O administrador ainda está configurando o WorkSeg AI. Volte em breve.
       </p>
+      {canClaim ? (
+        <div className="mt-8 text-center">
+          <p className="mx-auto mb-4 max-w-[640px] text-sm">
+            Você é administrador do Bitrix24. Se quem instalou o WorkSeg não está mais disponível,
+            você pode assumir a administração.
+          </p>
+          {claim.isError ? (
+            <p role="alert" className="mb-3 text-sm">
+              {claim.error.message}
+            </p>
+          ) : null}
+          <Button
+            variant="white"
+            size="md"
+            disabled={claim.isPending}
+            onClick={() => claim.mutate()}
+          >
+            Assumir a administração
+          </Button>
+        </div>
+      ) : null}
     </SetupCard>
   );
 }
@@ -232,7 +255,7 @@ export function SetupPage() {
     case "mapping":
       return <MappingStep api={api} />;
     case "waiting_admin":
-      return <WaitingAdmin />;
+      return <WaitingAdmin api={api} canClaim={status.data.canClaimAdmin} />;
     case "done":
       return <Navigate to="/" replace />;
   }
