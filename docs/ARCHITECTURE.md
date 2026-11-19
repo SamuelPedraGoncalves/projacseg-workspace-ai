@@ -43,14 +43,16 @@ da etapa ou é fechado.
 | `modules/journey/`         | Projeção do dashboard, `GET /api/v1/journey`, histórico do negócio                                                                                 |
 | `modules/assistant(-bot)/` | Chat do bot: IA com contexto do motor, ou mensagem fixa                                                                                            |
 | `modules/tenants/`         | Configuração por empresa (`tenants/<domínio>.json`)                                                                                                |
+| `modules/setup/`           | WorkSeg: acesso (administrador, criadores de regras, licença), termos e aceites, mapeamento, calendário e estrutura (`/api/v1/setup/*`)            |
 | `modules/web-app/`         | Serve o build e responde ao POST do Bitrix24                                                                                                       |
 | `prisma/`                  | Schema e migrações (`migrations/20261116000000_init`)                                                                                              |
 
 ### Dados (PostgreSQL)
 
-`Tenant` (tokens criptografados, config), `Rule`, `DealSnapshot`, `Occurrence` (única por negócio +
-regra + entrada na etapa), `OccurrenceEvent` (somente inserção), `NotificationLog` (deduplicação),
-`ThemePreference`.
+`Tenant` (tokens criptografados, config, `installedByUserId`), `Rule`, `DealSnapshot`, `Occurrence`
+(única por negócio + regra + entrada na etapa), `OccurrenceEvent` (somente inserção),
+`NotificationLog` (deduplicação), `ThemePreference`, `AssistantAction`, `TenantRole` (quem cria
+regras) e `ConsentRecord` (aceites de termos e avisos, somente inserção).
 
 ### Agendamento
 

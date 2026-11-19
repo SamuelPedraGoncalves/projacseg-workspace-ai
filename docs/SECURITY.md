@@ -58,6 +58,16 @@
   tratamento de dados com o provedor) antes de enviar qualquer dado pessoal.
 - O conteúdo enviado à IA é delimitado e tratado como dado, não instrução.
 
+## Primeiro acesso e Configurações (WorkSeg)
+
+- Toda rota `/api/v1/setup/*` exige a sessão assinada, respeita o modo piloto e decide no servidor quem
+  é administrador ou criador de regras; o navegador só esconde o que a API já recusa (401/403).
+- Aceitar os termos e escolher quem cria regras: só o administrador. Mapeamento, calendário e
+  estrutura: administrador e criadores de regras.
+- Aceites ficam em `ConsentRecord`, somente inserção (quem, versão, provisório ou não, quando).
+- Sem o aceite da versão vigente dos termos, nenhuma chamada à IA para a corretora.
+- O WorkSeg só lê a estrutura da empresa e o calendário do Bitrix24; nunca altera.
+
 ## Modo piloto
 
 Usado para testar no portal real: a restrição é aplicada pelo software (filtro na consulta ao CRM,

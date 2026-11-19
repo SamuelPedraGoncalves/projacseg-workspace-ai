@@ -2,6 +2,37 @@
 
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
+## [0.10.0] — 19/11/2026 — WorkSeg AI, base multiempresa (testado localmente)
+
+Primeira parte do WorkSeg AI, o produto para qualquer corretora (desenho em
+`docs/superpowers/specs/2026-11-19-workseg-ai-design.md`, plano 1 de 4). Testado localmente com dados
+falsos; **ainda não conferido no portal**.
+
+### Adicionado
+
+- Primeiro acesso: termos de uso, privacidade e LGPD (**versão provisória**, a ser trocada pelo texto
+  definitivo da TechStone), boas-vindas com a escolha de quem cria regras pelo seletor de usuários do
+  Bitrix24 e mapeamento dos campos (funis, tipo do seguro e seus valores, ramo, vigência, CPF, número
+  do cálculo, motivo de perda) com sugestão automática pelos rótulos (sem IA).
+- Papéis: administrador (quem instalou; no piloto, os usuários do piloto), criadores de regras e o
+  ponto único de licença (sempre liberado por enquanto). Um administrador do portal pode assumir a
+  administração quando o instalador sai (fora do piloto).
+- Configurações (só administrador e criadores de regras): mapeamento, calendário, estrutura da
+  empresa e quem cria regras.
+- Calendário da empresa lido do Bitrix24 (`calendar.settings.get`, permissão nova `calendar`) na
+  instalação e sob demanda; ajuste manual na tela.
+- Estrutura da empresa lida do Bitrix24 (`department.get`), com o chefe de cada departamento.
+- Aviso curto de privacidade, mostrado uma vez a quem não é administrador.
+- Tabelas `TenantRole` e `ConsentRecord` (somente inserção) e coluna `Tenant.installedByUserId`
+  (migração aditiva `20261119000000_workseg_base`, não revisada para produção).
+
+### Alterado
+
+- A IA só responde depois que o administrador aceita a versão vigente dos termos; aceitar liga a IA
+  da corretora. Termos com versão nova desligam a IA até o novo aceite.
+- Reinstalar mantém instalador, papéis, aceites, mapeamento confirmado e calendário ajustado.
+- O teste do PostgreSQL (PGlite) usa uma porta livre escolhida pelo sistema.
+
 ## [0.9.0] — 18/11/2026 — Assistente age no CRM pelo chat
 
 ### Adicionado

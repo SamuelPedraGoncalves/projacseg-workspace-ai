@@ -15,7 +15,7 @@ Status por etapa (legenda em [PROJECT.md](PROJECT.md)).
 | 9   | Orquestração multiagentes                     | Planejado, se a necessidade for confirmada                                                                           |
 | 10  | Homologação com a ProjacSeg                   | Planejado — nenhuma automação desligada sem autorização                                                              |
 | 11  | Produção                                      | Somente com autorização expressa                                                                                     |
-| 12  | Produto comercial (multiempresa, Marketplace) | Planejado                                                                                                            |
+| 12  | Produto comercial (multiempresa, Marketplace) | WorkSeg AI: plano 1 (base multiempresa) testado localmente · planos 2–4 planejados                                   |
 
 ## Secretário comercial — sprint 1 (17/11/2026)
 
@@ -49,3 +49,20 @@ false`, para comparar resultados do motor × robôs no portal de testes.
 
 Fora desta sprint: agentes com acesso a produção, alteração de automações, migrações definitivas,
 multiagentes, deploy.
+
+## WorkSeg AI (19/11/2026)
+
+O Workspace vira o **WorkSeg AI**, produto para qualquer corretora no Bitrix24 (desenho em
+`docs/superpowers/specs/2026-11-19-workseg-ai-design.md`). Quatro planos:
+
+1. **Base multiempresa** — testado localmente: termos provisórios, papéis, boas-vindas, mapeamento,
+   calendário e estrutura do Bitrix24, Configurações.
+2. **Regras pela tela** — planejado: texto livre traduzido pela IA, conferência por quem criou,
+   extensões do motor (repetição, horário, "feito", situação e ramo), sugestão de mapeamento pela IA.
+3. **Meus Afazeres** — planejado: afazeres, "feito", canais (afazeres e/ou chat), escalonamento ao
+   supervisor, ferramenta da IA por regra.
+4. **Telas** — planejado: Minha Jornada nova, Meus negócios (busca e filtros), Temas com cores do
+   gráfico, "Ver como", identidade WorkSeg, estrutura local de plano B.
+
+Fora do escopo agora: endossos, sinistros e pós-venda ("Em breve"), cobrança (teste de 7 dias,
+Asaas), aba no Connectex.

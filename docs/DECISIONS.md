@@ -312,3 +312,30 @@ Para testar com uma carteira maior, um usuário do piloto pode observar outro co
 (`pilot.viewAs`). O CRM passa a ler os negócios dele, mas: as ações pelo chat ficam desligadas, os
 alertas e o resumo vão para quem observa (marcados) e nada é enviado ao observado nem aos superiores
 dele.
+
+## D-055 — Termos provisórios; o aceite libera a IA
+
+O WorkSeg mostra os termos de uso, privacidade e LGPD no primeiro acesso do administrador. Enquanto o
+texto definitivo da TechStone não existe, a versão é provisória e marcada assim na tela e no registro
+(`ConsentRecord`, somente inserção). O aceite da versão vigente é o que libera a IA para a corretora;
+trocar a versão exige novo aceite.
+
+## D-056 — Administrador é quem instalou; no piloto, os usuários do piloto
+
+A autorização é calculada no servidor a cada pedido: administrador = `Tenant.installedByUserId`
+(mantido nas reinstalações); no modo piloto, os usuários do piloto. Criadores de regras são escolhidos
+pelo administrador (`TenantRole`). Um administrador do portal Bitrix24 pode assumir a administração
+fora do piloto.
+
+## D-057 — Mapeamento e situações na configuração da corretora
+
+Funis, campo e valores do tipo do seguro, ramo, vigência, CPF, número do cálculo e motivo de perda
+ficam em `TenantConfig` (`fieldMapping` só com códigos de campo; `situations` à parte). A sugestão
+deste passo é por regras de texto sobre os rótulos, apresentada como "sugestão automática"; a sugestão
+pela IA vem com a tradução de regras. Mapeamento confirmado na tela sobrevive à reinstalação.
+
+## D-058 — Calendário do Bitrix24, salvo ajuste ou arquivo
+
+O calendário útil vem de `calendar.settings.get` (expediente, folgas, feriados que se repetem). Um
+calendário ajustado na tela ou declarado no arquivo da empresa prevalece e não é sobrescrito. Sem a
+permissão `calendar`, a instalação continua com o calendário atual.
