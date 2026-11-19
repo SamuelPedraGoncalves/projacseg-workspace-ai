@@ -34,3 +34,35 @@ export interface PortalUserRef {
   id: string;
   name: string;
 }
+
+/** Funis e campos do negócio disponíveis no portal, para o mapeamento. */
+export interface MappingCatalog {
+  categories: { id: string; name: string }[];
+  fields: { code: string; label: string; type: string; items?: { id: string; value: string }[] }[];
+}
+
+/** O que a corretora confirma no mapeamento. */
+export interface MappingInput {
+  fieldMapping: {
+    insuranceType: string;
+    branch: string;
+    validity?: string;
+    cpf?: string;
+    quoteNumber?: string;
+    lossReason?: string;
+  };
+  situations: { categoryIds: string[]; newBusinessValues: string[]; renewalValues: string[] };
+}
+
+/** Sugestão parcial (só o que foi reconhecido pelos rótulos). */
+export interface MappingSuggestion {
+  fieldMapping: Partial<MappingInput["fieldMapping"]>;
+  situations: Partial<MappingInput["situations"]>;
+}
+
+export interface MappingView {
+  catalog: MappingCatalog;
+  current: MappingInput | null;
+  suggestion: MappingSuggestion;
+  confirmed: boolean;
+}

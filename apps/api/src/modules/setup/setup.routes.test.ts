@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { SessionSigner } from "../../security/session";
 import type { Store, TenantRecord } from "../../store/types";
-import { SESSION_SECRET, seedTenant, testApp } from "../../test/helpers";
+import { SESSION_SECRET, fakeRest, seedTenant, testApp } from "../../test/helpers";
 import { CURRENT_TERMS, aiAllowed } from "./terms";
 
 const signer = new SessionSigner(SESSION_SECRET);
@@ -273,6 +273,149 @@ describe("quem pode criar regras", () => {
     const pilot = await setup(store, { pilotUserIds: ["88"] });
     await store.tenants.update(tenant.id, { config: pilot.config });
     expect((await claim("88", true)).statusCode).toBe(403);
+    await app.close();
+  });
+});
+
+describe("mapeamento dos campos", () => {
+  const portal = () =>
+    fakeRest({
+      "crm.category.list": { categories: [{ id: 4, name: "Demais Ramos" }] },
+      "crm.status.list": [],
+      "crm.deal.fields": {
+        TITLE: { type: "string", title: "Nome" },
+        UF_CRM_TIPO: {
+          type: "enumeration",
+          formLabel: "Tipo do seguro",
+          items: [
+            { ID: "1", VALUE: "Seguro novo" },
+            { ID: "2", VALUE: "Renovação" },
+          ],
+        },
+        UF_CRM_RAMO: {
+          type: "enumeration",
+          formLabel: "Ramo",
+          items: [{ ID: "7", VALUE: "Auto" }],
+        },
+      },
+    });
+
+  async function ready(store: Store) {
+    const tenant = await setup(store, {
+      setup: { editorsConfirmedAt: "2026-11-19T10:00:00.000Z" },
+    });
+    await store.consents.append({
+      tenantId: tenant.id,
+      userId: ADMIN,
+      kind: "terms",
+      version: CURRENT_TERMS.version,
+      provisional: true,
+      acceptedAt: new Date(),
+    });
+    return tenant;
+  }
+
+  it("mostra o catálogo do portal (só campos personalizados) e a sugestão automática", async () => {
+    const { app, store } = await testApp({}, { restClient: portal().client });
+    const tenant = await ready(store);
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/v1/setup/mapping",
+      headers: bearer(tenant, ADMIN),
+    });
+    expect(response.statusCode).toBe(200);
+    const view = response.json();
+    expect(view.catalog.fields.map((field: { code: string }) => field.code)).toEqual([
+      "UF_CRM_TIPO",
+      "UF_CRM_RAMO",
+    ]);
+    expect(view.catalog.categories).toEqual([
+      { id: "4", name: "Demais Ramos" },
+      { id: "0", name: "Geral" },
+    ]);
+    expect(view.suggestion).toMatchObject({
+      fieldMapping: { insuranceType: "UF_CRM_TIPO", branch: "UF_CRM_RAMO" },
+      situations: { newBusinessValues: ["1"], renewalValues: ["2"] },
+    });
+    expect(view).toMatchObject({ current: null, confirmed: false });
+    await app.close();
+  });
+
+  it("inválido → 400 com os erros e nada gravado; válido → grava e conclui o primeiro acesso", async () => {
+    const { app, store } = await testApp({}, { restClient: portal().client });
+    const tenant = await ready(store);
+    const save = (payload: unknown, userId = ADMIN) =>
+      app.inject({
+        method: "PUT",
+        url: "/api/v1/setup/mapping",
+        headers: bearer(tenant, userId),
+        payload: payload as Record<string, unknown>,
+      });
+    const valid = {
+      fieldMapping: { insuranceType: "UF_CRM_TIPO", branch: "UF_CRM_RAMO" },
+      situations: { categoryIds: ["4"], newBusinessValues: ["1"], renewalValues: ["2"] },
+    };
+
+    const invalid = await save({
+      ...valid,
+      fieldMapping: { ...valid.fieldMapping, branch: "UF_CRM_9" },
+    });
+    expect(invalid.statusCode).toBe(400);
+    expect(invalid.json().errors).toEqual(['Campo "UF_CRM_9" não existe neste portal.']);
+    expect((await store.tenants.findById(tenant.id))?.config.situations).toBeUndefined();
+
+    expect((await save(valid, "51")).statusCode).toBe(403);
+    expect((await save(valid)).statusCode).toBe(200);
+    const saved = (await store.tenants.findById(tenant.id))!.config;
+    expect(saved.fieldMapping).toEqual(valid.fieldMapping);
+    expect(saved.situations).toEqual(valid.situations);
+
+    const status = await app.inject({
+      method: "GET",
+      url: "/api/v1/setup",
+      headers: bearer(tenant, ADMIN),
+    });
+    expect(status.json().step).toBe("done");
+
+    const view = await app.inject({
+      method: "GET",
+      url: "/api/v1/setup/mapping",
+      headers: bearer(tenant, ADMIN),
+    });
+    expect(view.json()).toMatchObject({ current: valid, confirmed: true });
+    await app.close();
+  });
+
+  it("salvar o mapeamento relê o catálogo e pede nova sincronização do CRM", async () => {
+    const rest = portal();
+    const { app, store } = await testApp({}, { restClient: rest.client });
+    const tenant = await ready(store);
+    const before = rest.calls.filter((call) => call.method === "crm.deal.fields").length;
+    const response = await app.inject({
+      method: "PUT",
+      url: "/api/v1/setup/mapping",
+      headers: bearer(tenant, ADMIN),
+      payload: {
+        fieldMapping: { insuranceType: "UF_CRM_TIPO", branch: "UF_CRM_RAMO" },
+        situations: { categoryIds: ["4"], newBusinessValues: ["1"], renewalValues: ["2"] },
+      },
+    });
+    expect(response.statusCode).toBe(200);
+    // Uma leitura para validar e outra, já com o mapeamento novo, para o catálogo usado no CRM.
+    await new Promise((done) => setTimeout(done, 10));
+    expect(rest.calls.filter((call) => call.method === "crm.deal.fields").length - before).toBe(2);
+    await app.close();
+  });
+
+  it("sem acesso a Configurações → 403", async () => {
+    const { app, store } = await testApp({}, { restClient: portal().client });
+    const tenant = await ready(store);
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/v1/setup/mapping",
+      headers: bearer(tenant, "51"),
+    });
+    expect(response.statusCode).toBe(403);
     await app.close();
   });
 });

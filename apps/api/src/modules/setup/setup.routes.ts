@@ -1,10 +1,19 @@
-import type { PortalUserRef, SetupStatus, SetupStep, TermsDocument } from "@projacseg/shared";
+import type {
+  MappingCatalog,
+  MappingInput,
+  MappingView,
+  PortalUserRef,
+  SetupStatus,
+  SetupStep,
+  TermsDocument,
+} from "@projacseg/shared";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { SessionSigner } from "../../security/session";
 import type { Store, TenantRecord } from "../../store/types";
 import { pilotUsers } from "../tenants/pilot";
 import { requireSession, type Access } from "./access";
+import { suggestMapping, validateMapping } from "./mapping";
 import { CURRENT_TERMS, PRIVACY_NOTICE, termsAccepted } from "./terms";
 
 const editorsSchema = z.object({
@@ -24,6 +33,23 @@ export interface SetupRoutesOptions {
   /** Termos vigentes (os testes injetam uma versão nova). */
   terms?: TermsDocument;
   now?: () => Date;
+  /** Funis e campos do portal, lidos na hora (o mapeamento precisa ver campos recém-criados). */
+  catalog?: (tenant: TenantRecord) => Promise<MappingCatalog>;
+  /** Mapeamento salvo: recarregar o catálogo do CRM e ressincronizar os negócios. */
+  onMappingSaved?: (tenant: TenantRecord) => void;
+}
+
+function currentMapping(tenant: TenantRecord): MappingInput | null {
+  const { fieldMapping, situations } = tenant.config;
+  if (!situations || !fieldMapping.insuranceType || !fieldMapping.branch) return null;
+  return {
+    fieldMapping: {
+      ...fieldMapping,
+      insuranceType: fieldMapping.insuranceType,
+      branch: fieldMapping.branch,
+    },
+    situations,
+  };
 }
 
 function nextStep(tenant: TenantRecord, access: Access, accepted: boolean): SetupStep {
@@ -168,6 +194,42 @@ export async function setupRoutes(app: FastifyInstance, options: SetupRoutesOpti
       },
       "Administração do WorkSeg assumida por administrador do portal.",
     );
+    return reply.send({ ok: true });
+  });
+
+  app.get("/api/v1/setup/mapping", async (request, reply) => {
+    const auth = await requireSession(request, reply, deps);
+    if (!auth) return reply;
+    if (!auth.access.settings)
+      return reply.code(403).send({ error: "Sem acesso a Configurações." });
+    if (!options.catalog) return reply.code(503).send({ error: "Leitura do CRM indisponível." });
+    const catalog = await options.catalog(auth.tenant);
+    const view: MappingView = {
+      catalog,
+      current: currentMapping(auth.tenant),
+      suggestion: suggestMapping(catalog),
+      confirmed: Boolean(auth.tenant.config.setup?.mappingConfirmedAt),
+    };
+    return reply.header("Cache-Control", "no-store").send(view);
+  });
+
+  app.put<{ Body: unknown }>("/api/v1/setup/mapping", async (request, reply) => {
+    const auth = await requireSession(request, reply, deps);
+    if (!auth) return reply;
+    if (!auth.access.settings)
+      return reply.code(403).send({ error: "Sem acesso a Configurações." });
+    if (!options.catalog) return reply.code(503).send({ error: "Leitura do CRM indisponível." });
+    const result = validateMapping(request.body, await options.catalog(auth.tenant));
+    if (!result.ok) return reply.code(400).send({ errors: result.errors });
+    const updated = await options.store.tenants.update(auth.tenant.id, {
+      config: {
+        ...auth.tenant.config,
+        fieldMapping: result.value.fieldMapping,
+        situations: result.value.situations,
+        setup: { ...auth.tenant.config.setup, mappingConfirmedAt: now().toISOString() },
+      },
+    });
+    options.onMappingSaved?.(updated);
     return reply.send({ ok: true });
   });
 

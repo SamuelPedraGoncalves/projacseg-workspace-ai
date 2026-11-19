@@ -34,6 +34,7 @@ import type { DealSource, SuperiorResolver } from "./modules/engine/ports";
 import { EngineScheduler } from "./modules/engine/scheduler";
 import { healthRoutes } from "./modules/health/health.routes";
 import { journeyRoutes } from "./modules/journey/journey.routes";
+import { toMappingCatalog } from "./modules/setup/mapping";
 import { setupRoutes } from "./modules/setup/setup.routes";
 import { aiAllowed } from "./modules/setup/terms";
 import { registerWebApp } from "./modules/web-app/web-app.routes";
@@ -199,6 +200,13 @@ export async function buildApp(env: Env, deps: AppDeps = {}): Promise<FastifyIns
     signer,
     now,
     ...(deps.terms ? { terms: deps.terms } : {}),
+    catalog: async (tenant) => toMappingCatalog(await crm.catalog(tenant, true)),
+    onMappingSaved: (tenant) => {
+      void crm.catalog(tenant, true).catch((error: unknown) => {
+        app.log.warn({ err: error }, "Catálogo do CRM não recarregado após o mapeamento.");
+      });
+      scheduler.requestFullSync(tenant.id);
+    },
   });
   await app.register(crmEventsRoutes, { verifier, engine });
   await app.register(assistantBotRoutes, { verifier, bot: assistantBot, assistant, store, signer });
