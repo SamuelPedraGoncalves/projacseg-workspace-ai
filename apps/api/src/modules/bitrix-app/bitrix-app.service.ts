@@ -123,6 +123,20 @@ export class BitrixAppService {
 
     const existing = await this.deps.store.tenants.findByMemberId(frame.memberId);
     const file = await loadTenantFile(this.deps.tenantsDir, domain);
+    const base = file?.config ?? existing?.config ?? DEFAULT_TENANT_CONFIG;
+    // O que a corretora configurou pela tela (mapeamento, situações, primeiro acesso) sobrevive
+    // à reinstalação, mesmo que exista arquivo da empresa.
+    const configured = existing?.config;
+    const config = {
+      ...base,
+      ...(configured?.setup?.mappingConfirmedAt
+        ? {
+            fieldMapping: configured.fieldMapping,
+            ...(configured.situations ? { situations: configured.situations } : {}),
+          }
+        : {}),
+      ...(configured?.setup ? { setup: configured.setup } : {}),
+    };
     let tenant = await this.deps.store.tenants.upsert({
       domain,
       memberId: frame.memberId,
@@ -131,7 +145,9 @@ export class BitrixAppService {
       accessTokenEnc: null,
       refreshTokenEnc: null,
       tokenExpiresAt: null,
-      config: file?.config ?? existing?.config ?? DEFAULT_TENANT_CONFIG,
+      // Administrador do WorkSeg: quem instalou pela primeira vez.
+      installedByUserId: existing?.installedByUserId ?? who.userId,
+      config,
     });
     tenant = await this.deps.portal.saveTokens(tenant, {
       accessToken: frame.authId,

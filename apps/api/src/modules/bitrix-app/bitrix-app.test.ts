@@ -117,6 +117,76 @@ describe("instalação e abertura no Bitrix24", () => {
     await app.close();
   });
 
+  it("grava quem instalou; reinstalar (por outro admin) mantém instalador, papéis, aceites e mapeamento", async () => {
+    const dist = webDist();
+    const tenants = tenantsDir();
+    const install = (userId: string) =>
+      fakeRest({
+        "app.info": { CODE: "local.app.1" },
+        "user.current": { ID: userId, NAME: "Admin" },
+        "user.admin": true,
+        "event.bind": true,
+        "crm.category.list": { categories: [] },
+        "crm.status.list": [],
+      });
+    const request = {
+      ...frame({ AUTH_ID: "a", REFRESH_ID: "r", AUTH_EXPIRES: "3600", member_id: "membro-1" }),
+      url: `/install?DOMAIN=${DOMAIN}&APP_SID=abc`,
+    };
+
+    const first = await testApp(
+      { WEB_DIST_DIR: dist, TENANTS_DIR: tenants },
+      { restClient: install("7").client },
+    );
+    await first.app.inject(request);
+    const tenant = (await first.store.tenants.findByMemberId("membro-1"))!;
+    expect(tenant.installedByUserId).toBe("7");
+
+    const configured = {
+      ...tenant.config,
+      fieldMapping: { insuranceType: "UF_CRM_TIPO", branch: "UF_CRM_RAMO" },
+      situations: { categoryIds: ["0"], newBusinessValues: ["1"], renewalValues: ["2"] },
+      setup: {
+        editorsConfirmedAt: "2026-11-19T10:00:00.000Z",
+        mappingConfirmedAt: "2026-11-19T10:05:00.000Z",
+      },
+    };
+    await first.store.tenants.update(tenant.id, { config: configured });
+    await first.store.roles.replace(
+      tenant.id,
+      "rule_editor",
+      [{ userId: "51", userName: "Ana" }],
+      "7",
+      new Date(),
+    );
+    await first.store.consents.append({
+      tenantId: tenant.id,
+      userId: "7",
+      kind: "terms",
+      version: "v1",
+      provisional: true,
+      acceptedAt: new Date(),
+    });
+    await first.app.close();
+
+    const second = await testApp(
+      { WEB_DIST_DIR: dist, TENANTS_DIR: tenants },
+      { restClient: install("9").client, store: first.store },
+    );
+    await second.app.inject(request);
+    const again = (await second.store.tenants.findByMemberId("membro-1"))!;
+    expect(again.installedByUserId).toBe("7");
+    expect(again.config).toMatchObject({
+      fieldMapping: configured.fieldMapping,
+      situations: configured.situations,
+      setup: configured.setup,
+      digestTime: "08:30", // o restante continua vindo do arquivo da empresa
+    });
+    expect(await second.store.roles.list(tenant.id)).toHaveLength(1);
+    expect(await second.store.consents.latest(tenant.id, "terms")).not.toBeNull();
+    await second.app.close();
+  });
+
   it("recusa instalação por quem não é administrador", async () => {
     const { app, store } = await testApp(
       { WEB_DIST_DIR: webDist() },

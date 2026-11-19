@@ -34,7 +34,9 @@ export async function checkRolesConsentsAndInstaller(store: Store, memberId: str
     "1",
     at("2026-11-20T10:00:00Z"),
   );
-  const roles = (await store.roles.list(tenant.id)).sort((a, b) => a.userId.localeCompare(b.userId));
+  const roles = (await store.roles.list(tenant.id)).sort((a, b) =>
+    a.userId.localeCompare(b.userId),
+  );
   expect(roles.map((role) => role.userId)).toEqual(["51", "77"]);
   expect(roles[0]?.grantedAt.toISOString()).toBe("2026-11-19T10:00:00.000Z");
   expect(roles[1]).toMatchObject({ userName: "Bruno", role: "rule_editor", grantedBy: "1" });
