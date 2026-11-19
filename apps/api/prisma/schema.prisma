@@ -11,20 +11,22 @@ datasource db {
 
 /// Empresa cliente = um portal Bitrix24.
 model Tenant {
-  id               String   @id @default(cuid())
-  domain           String   @unique
-  memberId         String   @unique
-  clientEndpoint   String
+  id                String    @id @default(cuid())
+  domain            String    @unique
+  memberId          String    @unique
+  clientEndpoint    String
   /// Conferido em todo evento recebido do portal.
-  applicationToken String?
+  applicationToken  String?
   /// Tokens OAuth do aplicativo, criptografados (AES-256-GCM). Nunca em texto puro.
-  accessTokenEnc   String?
-  refreshTokenEnc  String?
-  tokenExpiresAt   DateTime?
+  accessTokenEnc    String?
+  refreshTokenEnc   String?
+  tokenExpiresAt    DateTime?
+  /// Usuário do Bitrix24 que instalou o app (administrador do WorkSeg). Mantido nas reinstalações.
+  installedByUserId String?
   /// Calendário útil, mapeamento de campos, horário do resumo diário, IA ligada/desligada.
-  config           Json
-  installedAt      DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  config            Json
+  installedAt       DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   rules            Rule[]
   deals            DealSnapshot[]
@@ -32,18 +34,20 @@ model Tenant {
   themePreferences ThemePreference[]
   notifications    NotificationLog[]
   assistantActions AssistantAction[]
+  roles            TenantRole[]
+  consents         ConsentRecord[]
 }
 
 /// Regra operacional configurável (ver packages/engine/src/rules.ts).
 model Rule {
-  id           String   @id @default(cuid())
-  tenantId     String
-  code         String
-  definition   Json
-  enabled      Boolean
-  homologated  Boolean
-  updatedAt    DateTime @updatedAt
-  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  id          String   @id @default(cuid())
+  tenantId    String
+  code        String
+  definition  Json
+  enabled     Boolean
+  homologated Boolean
+  updatedAt   DateTime @updatedAt
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, code])
 }
@@ -127,24 +131,24 @@ model NotificationLog {
 /// Ações pedidas ao assistente no chat (mover etapa, preencher campo): proposta, confirmação e
 /// resultado. Também é o registro de auditoria do que a IA alterou no CRM e a pedido de quem.
 model AssistantAction {
-  id         String    @id @default(cuid())
-  tenantId   String
+  id        String    @id @default(cuid())
+  tenantId  String
   /// Colaborador que pediu (ID do usuário no Bitrix24).
-  userId     String
-  dealId     String
+  userId    String
+  dealId    String
   /// stage | field
-  kind       String
+  kind      String
   /// Alteração validada pelo servidor (ex.: {"STAGE_ID":"UC_IYS6WC"}).
-  payload    Json
+  payload   Json
   /// Texto mostrado ao colaborador na confirmação.
-  summary    String
+  summary   String
   /// pending | executed | cancelled | expired | failed
-  status     String
-  createdAt  DateTime  @default(now())
-  expiresAt  DateTime
-  decidedAt  DateTime?
-  result     String?
-  tenant     Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  status    String
+  createdAt DateTime  @default(now())
+  expiresAt DateTime
+  decidedAt DateTime?
+  result    String?
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, userId, status])
 }
@@ -159,4 +163,35 @@ model ThemePreference {
   tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, bitrixUserId])
+}
+
+/// Papéis dados dentro do WorkSeg (ex.: quem pode criar regras), escolhidos pelo administrador.
+model TenantRole {
+  id        String   @id @default(cuid())
+  tenantId  String
+  /// ID do usuário no Bitrix24.
+  userId    String
+  userName  String
+  /// rule_editor
+  role      String
+  grantedBy String
+  grantedAt DateTime
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, role, userId])
+}
+
+/// Aceites de termos e avisos (somente inserção): quem aceitou, qual versão e quando.
+model ConsentRecord {
+  id          String   @id @default(cuid())
+  tenantId    String
+  userId      String
+  /// terms | privacy_notice
+  kind        String
+  version     String
+  provisional Boolean
+  acceptedAt  DateTime
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, kind, userId, acceptedAt])
 }

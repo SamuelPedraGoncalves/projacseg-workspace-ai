@@ -1,24 +1,36 @@
 import { PGlite } from "@electric-sql/pglite";
 import { PGLiteSocketServer } from "@electric-sql/pglite-socket";
 import { readdirSync, readFileSync } from "node:fs";
+import { createServer, type AddressInfo } from "node:net";
 import { resolve } from "node:path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { EngineService } from "../modules/engine/engine.service";
 import { buildJourney } from "../modules/journey/journey.service";
 import { RULE, at, seedTenant, snapshot } from "../test/helpers";
 import { createPrismaStore } from "./prisma-store";
+import { checkRolesConsentsAndInstaller } from "./store-contract";
 import type { Store } from "./types";
 
 /**
  * Integração real com PostgreSQL (PGlite = Postgres em WebAssembly, servido via protocolo de rede):
  * aplica a migração versionada e exercita o armazenamento Prisma de ponta a ponta.
  */
-const PORT = 54329;
+/** Porta livre escolhida pelo sistema (uma porta fixa pode estar ocupada, ex.: pelo Docker). */
+async function freePort(): Promise<number> {
+  const probe = createServer();
+  await new Promise<void>((done) => probe.listen(0, "127.0.0.1", done));
+  const { port } = probe.address() as AddressInfo;
+  await new Promise<void>((done) => probe.close(() => done()));
+  return port;
+}
+
+let PORT = 0;
 let pg: PGlite;
 let server: PGLiteSocketServer;
 let store: Store;
 
 beforeAll(async () => {
+  PORT = await freePort();
   pg = new PGlite();
   // Todas as migrações versionadas, em ordem — como o `prisma migrate deploy`.
   const dir = resolve(__dirname, "../../prisma/migrations");
@@ -97,6 +109,10 @@ describe("armazenamento Prisma em PostgreSQL", () => {
     expect(await store.notifications.claim(tenant.id, "7", "overdue", "k1")).toBe(false);
     await store.notifications.release(tenant.id, "k1");
     expect(await store.notifications.claim(tenant.id, "7", "overdue", "k1")).toBe(true);
+  });
+
+  it("papéis, aceites e instalador", async () => {
+    await checkRolesConsentsAndInstaller(store, "membro-contrato");
   });
 
   it("motor de regras completo sobre o banco", async () => {

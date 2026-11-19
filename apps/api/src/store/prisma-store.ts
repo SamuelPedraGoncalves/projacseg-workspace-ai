@@ -3,11 +3,14 @@ import type { OccurrenceStatus, RuleDefinition } from "@projacseg/engine";
 import { Prisma, PrismaClient } from "../generated/prisma/client";
 import type {
   AssistantActionRecord,
+  ConsentKind,
+  ConsentRecord,
   DealSnapshotRecord,
   OccurrenceRecord,
   Store,
   TenantConfig,
   TenantRecord,
+  TenantRoleName,
 } from "./types";
 
 type TenantRow = Prisma.TenantGetPayload<object>;
@@ -23,7 +26,19 @@ const toTenant = (row: TenantRow): TenantRecord => ({
   accessTokenEnc: row.accessTokenEnc,
   refreshTokenEnc: row.refreshTokenEnc,
   tokenExpiresAt: row.tokenExpiresAt,
+  installedByUserId: row.installedByUserId,
   config: row.config as unknown as TenantConfig,
+});
+
+type ConsentRow = Prisma.ConsentRecordGetPayload<object>;
+
+const toConsent = (row: ConsentRow): ConsentRecord => ({
+  tenantId: row.tenantId,
+  userId: row.userId,
+  kind: row.kind as ConsentKind,
+  version: row.version,
+  provisional: row.provisional,
+  acceptedAt: row.acceptedAt,
 });
 
 const toOccurrence = (row: OccurrenceRow): OccurrenceRecord => ({
@@ -98,11 +113,14 @@ export function createPrismaStore(databaseUrl: string): Store {
       },
       list: async () => (await db.tenant.findMany()).map(toTenant),
       upsert: async (input) => {
-        const data = { ...input, config: json(input.config) };
+        const { installedByUserId, ...rest } = input;
+        const data = { ...rest, config: json(input.config) };
+        // Sem instalador informado, a reinstalação mantém o já gravado.
+        const installer = installedByUserId ? { installedByUserId } : {};
         const row = await db.tenant.upsert({
           where: { memberId: input.memberId },
-          create: data,
-          update: data,
+          create: { ...data, installedByUserId: installedByUserId ?? null },
+          update: { ...data, ...installer },
         });
         return toTenant(row);
       },
@@ -113,6 +131,43 @@ export function createPrismaStore(databaseUrl: string): Store {
           data: { ...rest, ...(config ? { config: json(config) } : {}) },
         });
         return toTenant(row);
+      },
+    },
+    roles: {
+      list: async (tenantId) =>
+        (await db.tenantRole.findMany({ where: { tenantId }, orderBy: { userId: "asc" } })).map(
+          (row) => ({
+            tenantId: row.tenantId,
+            userId: row.userId,
+            userName: row.userName,
+            role: row.role as TenantRoleName,
+            grantedBy: row.grantedBy,
+            grantedAt: row.grantedAt,
+          }),
+        ),
+      replace: async (tenantId, role, users, grantedBy, at) => {
+        await db.$transaction([
+          db.tenantRole.deleteMany({
+            where: { tenantId, role, userId: { notIn: users.map((user) => user.userId) } },
+          }),
+          ...users.map((user) =>
+            db.tenantRole.upsert({
+              where: { tenantId_role_userId: { tenantId, role, userId: user.userId } },
+              create: { tenantId, role, ...user, grantedBy, grantedAt: at },
+              update: { userName: user.userName },
+            }),
+          ),
+        ]);
+      },
+    },
+    consents: {
+      append: async (record) => void (await db.consentRecord.create({ data: record })),
+      latest: async (tenantId, kind, userId) => {
+        const row = await db.consentRecord.findFirst({
+          where: { tenantId, kind, ...(userId === undefined ? {} : { userId }) },
+          orderBy: { acceptedAt: "desc" },
+        });
+        return row ? toConsent(row) : null;
       },
     },
     rules: {

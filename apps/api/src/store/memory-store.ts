@@ -2,7 +2,9 @@ import { randomUUID } from "node:crypto";
 import type { RuleDefinition } from "@projacseg/engine";
 import type {
   AssistantActionRecord,
+  ConsentRecord,
   DealSnapshotRecord,
+  TenantRoleRecord,
   OccurrenceEventRecord,
   OccurrenceRecord,
   Store,
@@ -32,6 +34,8 @@ export function createMemoryStore(): Store {
   const events: OccurrenceEventRecord[] = [];
   const notifications = new Set<string>();
   const actions = new Map<string, AssistantActionRecord>();
+  let roleRecords: TenantRoleRecord[] = [];
+  const consentRecords: ConsentRecord[] = [];
 
   const dealKey = (tenantId: string, dealId: string) => `${tenantId}\u0000${dealId}`;
   const findTenant = (predicate: (tenant: TenantRecord) => boolean) => {
@@ -47,7 +51,11 @@ export function createMemoryStore(): Store {
       list: async () => [...tenants.values()].map(clone),
       upsert: async (input) => {
         const existing = [...tenants.values()].find((tenant) => tenant.memberId === input.memberId);
-        const record: TenantRecord = { ...input, id: existing?.id ?? randomUUID() };
+        const record: TenantRecord = {
+          ...input,
+          installedByUserId: input.installedByUserId ?? existing?.installedByUserId ?? null,
+          id: existing?.id ?? randomUUID(),
+        };
         tenants.set(record.id, clone(record));
         return clone(record);
       },
@@ -57,6 +65,40 @@ export function createMemoryStore(): Store {
         const record = { ...existing, ...patch, id };
         tenants.set(id, clone(record));
         return clone(record);
+      },
+    },
+    roles: {
+      list: async (tenantId) => roleRecords.filter((item) => item.tenantId === tenantId).map(clone),
+      replace: async (tenantId, role, users, grantedBy, at) => {
+        const keep = new Set(users.map((user) => user.userId));
+        const current = roleRecords.filter(
+          (item) => item.tenantId === tenantId && item.role === role,
+        );
+        roleRecords = roleRecords.filter(
+          (item) => item.tenantId !== tenantId || item.role !== role || keep.has(item.userId),
+        );
+        for (const user of users) {
+          const existing = current.find((item) => item.userId === user.userId);
+          if (existing) {
+            existing.userName = user.userName;
+          } else {
+            roleRecords.push({ tenantId, role, ...user, grantedBy, grantedAt: new Date(at) });
+          }
+        }
+      },
+    },
+    consents: {
+      append: async (record) => void consentRecords.push(clone(record)),
+      latest: async (tenantId, kind, userId) => {
+        const found = consentRecords
+          .filter(
+            (item) =>
+              item.tenantId === tenantId &&
+              item.kind === kind &&
+              (userId === undefined || item.userId === userId),
+          )
+          .sort((a, b) => b.acceptedAt.getTime() - a.acceptedAt.getTime())[0];
+        return found ? clone(found) : null;
       },
     },
     rules: {

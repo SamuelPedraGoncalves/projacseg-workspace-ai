@@ -15,10 +15,27 @@ import type { TenantConfig } from "../../store/types";
  * Configuração de cada empresa em `tenants/<domínio>.json`, versionada no Git: mudar uma regra é um
  * commit revisável (trilha de auditoria das regras). Nada de IDs de pipeline, etapa ou campo no código.
  */
+const fieldCode = z.string().regex(/^[A-Z][A-Z0-9_]*$/, "Código de campo do Bitrix24 inválido");
+
 const tenantFileSchema = z.object({
   calendar: businessCalendarSchema.optional(),
   fieldMapping: z
-    .object({ branch: z.string().optional(), insuranceType: z.string().optional() })
+    .object({
+      insuranceType: fieldCode.optional(),
+      branch: fieldCode.optional(),
+      validity: fieldCode.optional(),
+      cpf: fieldCode.optional(),
+      quoteNumber: fieldCode.optional(),
+      lossReason: fieldCode.optional(),
+    })
+    .optional(),
+  /** Quais negócios são Seguro Novo e Renovação (normalmente definido pela tela de mapeamento). */
+  situations: z
+    .object({
+      categoryIds: z.array(z.string()).min(1),
+      newBusinessValues: z.array(z.string()).min(1),
+      renewalValues: z.array(z.string()).min(1),
+    })
     .optional(),
   digestTime: z
     .string()
@@ -99,6 +116,7 @@ export async function loadTenantFile(dir: string, domain: string): Promise<Tenan
     config: {
       calendar: file.calendar ?? DEFAULT_TENANT_CONFIG.calendar,
       fieldMapping: file.fieldMapping ?? {},
+      ...(file.situations ? { situations: file.situations } : {}),
       digestTime:
         file.digestTime === undefined ? DEFAULT_TENANT_CONFIG.digestTime : file.digestTime,
       aiEnabled: file.aiEnabled ?? false,

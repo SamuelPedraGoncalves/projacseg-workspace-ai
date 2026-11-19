@@ -6,10 +6,38 @@ import type {
   RuleDefinition,
 } from "@projacseg/engine";
 
+/**
+ * Campos personalizados (UF_CRM_*) do portal, definidos no mapeamento. Configuração, nunca código.
+ * Só códigos de campo (strings): o `CrmReader` lê todos os valores daqui como campos do negócio.
+ */
+export interface FieldMapping {
+  insuranceType?: string;
+  branch?: string;
+  validity?: string;
+  cpf?: string;
+  quoteNumber?: string;
+  lossReason?: string;
+}
+
+/** Quais negócios são Seguro Novo e Renovação: funis e itens do campo de tipo do seguro. */
+export interface SituationMapping {
+  categoryIds: string[];
+  newBusinessValues: string[];
+  renewalValues: string[];
+}
+
+/** Marcos do primeiro acesso (datas ISO) e origem do calendário. */
+export interface SetupMilestones {
+  editorsConfirmedAt?: string;
+  mappingConfirmedAt?: string;
+  calendarSource?: "bitrix24" | "default" | "manual";
+}
+
 export interface TenantConfig {
   calendar: BusinessCalendar;
-  /** Campos personalizados (UF_CRM_*) do portal. Configuração, nunca código. */
-  fieldMapping: { branch?: string; insuranceType?: string };
+  fieldMapping: FieldMapping;
+  situations?: SituationMapping;
+  setup?: SetupMilestones;
   /** Horário local do resumo diário ("08:00"); `null` desliga. */
   digestTime: string | null;
   /** Liga as respostas por IA no chat do assistente (requer provedor configurado). */
@@ -48,7 +76,32 @@ export interface TenantRecord {
   accessTokenEnc: string | null;
   refreshTokenEnc: string | null;
   tokenExpiresAt: Date | null;
+  /** Usuário do Bitrix24 que instalou o app (administrador do WorkSeg). */
+  installedByUserId?: string | null;
   config: TenantConfig;
+}
+
+export type TenantRoleName = "rule_editor";
+
+export interface TenantRoleRecord {
+  tenantId: string;
+  userId: string;
+  userName: string;
+  role: TenantRoleName;
+  grantedBy: string;
+  grantedAt: Date;
+}
+
+export type ConsentKind = "terms" | "privacy_notice";
+
+/** Aceite de termos ou aviso. Somente inserção. */
+export interface ConsentRecord {
+  tenantId: string;
+  userId: string;
+  kind: ConsentKind;
+  version: string;
+  provisional: boolean;
+  acceptedAt: Date;
 }
 
 export interface DealSnapshotRecord extends DealView {
@@ -121,9 +174,28 @@ export interface Store {
     findByMemberId(memberId: string): Promise<TenantRecord | null>;
     findByDomain(domain: string): Promise<TenantRecord | null>;
     list(): Promise<TenantRecord[]>;
-    /** Cria ou atualiza pelo `memberId` (reinstalação). */
+    /**
+     * Cria ou atualiza pelo `memberId` (reinstalação). Sem `installedByUserId` no input, mantém o
+     * já gravado.
+     */
     upsert(input: Omit<TenantRecord, "id">): Promise<TenantRecord>;
     update(id: string, patch: Partial<Omit<TenantRecord, "id">>): Promise<TenantRecord>;
+  };
+  roles: {
+    list(tenantId: string): Promise<TenantRoleRecord[]>;
+    /** Substitui os usuários do papel; quem continua mantém `grantedBy`/`grantedAt` originais. */
+    replace(
+      tenantId: string,
+      role: TenantRoleName,
+      users: { userId: string; userName: string }[],
+      grantedBy: string,
+      at: Date,
+    ): Promise<void>;
+  };
+  consents: {
+    append(record: ConsentRecord): Promise<void>;
+    /** Aceite mais recente do tipo; com `userId`, só os daquele usuário. */
+    latest(tenantId: string, kind: ConsentKind, userId?: string): Promise<ConsentRecord | null>;
   };
   rules: {
     list(tenantId: string): Promise<RuleDefinition[]>;
