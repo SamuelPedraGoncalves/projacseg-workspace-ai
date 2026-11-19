@@ -28,3 +28,9 @@ export interface TermsDocument {
   title: string;
   body: string;
 }
+
+/** Usuário do portal Bitrix24 (ID e nome para exibição). */
+export interface PortalUserRef {
+  id: string;
+  name: string;
+}

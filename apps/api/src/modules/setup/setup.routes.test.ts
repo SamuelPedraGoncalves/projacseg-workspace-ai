@@ -174,3 +174,105 @@ describe("primeiro acesso: termos e situação", () => {
     await app.close();
   });
 });
+
+describe("quem pode criar regras", () => {
+  async function accepted(store: Store) {
+    const tenant = await setup(store);
+    await store.consents.append({
+      tenantId: tenant.id,
+      userId: ADMIN,
+      kind: "terms",
+      version: CURRENT_TERMS.version,
+      provisional: true,
+      acceptedAt: new Date(),
+    });
+    return tenant;
+  }
+
+  it("só o administrador escolhe; a escolha avança o primeiro acesso", async () => {
+    const { app, store } = await testApp();
+    const tenant = await accepted(store);
+    const save = (userId: string, editors: unknown) =>
+      app.inject({
+        method: "PUT",
+        url: "/api/v1/setup/editors",
+        headers: bearer(tenant, userId),
+        payload: { editors },
+      });
+
+    expect((await save("51", [])).statusCode).toBe(403);
+    expect((await save(ADMIN, [{ id: "abc", name: "X" }])).statusCode).toBe(400);
+    expect((await save(ADMIN, [{ id: "51", name: "" }])).statusCode).toBe(400);
+    expect((await save(ADMIN, [{ id: "51", name: "Ana" }])).statusCode).toBe(200);
+
+    const list = await app.inject({
+      method: "GET",
+      url: "/api/v1/setup/editors",
+      headers: bearer(tenant, "51"),
+    });
+    expect(list.json()).toEqual({ editors: [{ id: "51", name: "Ana" }] });
+
+    const status = await app.inject({
+      method: "GET",
+      url: "/api/v1/setup",
+      headers: bearer(tenant, ADMIN),
+    });
+    expect(status.json().step).toBe("mapping");
+    // Ana passou a ver Configurações.
+    const ana = await app.inject({
+      method: "GET",
+      url: "/api/v1/setup",
+      headers: bearer(tenant, "51"),
+    });
+    expect(ana.json().access).toEqual({ admin: false, ruleEditor: true, settings: true });
+    await app.close();
+  });
+
+  it("lista vazia é válida: só o administrador cria regras", async () => {
+    const { app, store } = await testApp();
+    const tenant = await accepted(store);
+    const response = await app.inject({
+      method: "PUT",
+      url: "/api/v1/setup/editors",
+      headers: bearer(tenant, ADMIN),
+      payload: { editors: [] },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(
+      (await store.tenants.findById(tenant.id))?.config.setup?.editorsConfirmedAt,
+    ).toBeTruthy();
+    await app.close();
+  });
+
+  it("sem acesso a Configurações, a lista de quem cria regras é recusada", async () => {
+    const { app, store } = await testApp();
+    const tenant = await accepted(store);
+    const list = await app.inject({
+      method: "GET",
+      url: "/api/v1/setup/editors",
+      headers: bearer(tenant, "51"),
+    });
+    expect(list.statusCode).toBe(403);
+    await app.close();
+  });
+
+  it("administrador do portal assume quando o instalador saiu (fora do piloto)", async () => {
+    const { app, store } = await testApp();
+    const tenant = await accepted(store);
+    const claim = (userId: string, portalAdmin: boolean) =>
+      app.inject({
+        method: "POST",
+        url: "/api/v1/setup/claim-admin",
+        headers: bearer(tenant, userId, portalAdmin),
+      });
+
+    expect((await claim("88", false)).statusCode).toBe(403);
+    expect((await claim("88", true)).statusCode).toBe(200);
+    expect((await store.tenants.findById(tenant.id))?.installedByUserId).toBe("88");
+
+    const pilot = await setup(store, { pilotUserIds: ["88"] });
+    await store.tenants.update(tenant.id, { config: pilot.config });
+    expect((await claim("88", true)).statusCode).toBe(403);
+    await app.close();
+  });
+});

@@ -1,9 +1,22 @@
-import type { SetupStatus, SetupStep, TermsDocument } from "@projacseg/shared";
+import type { PortalUserRef, SetupStatus, SetupStep, TermsDocument } from "@projacseg/shared";
 import type { FastifyInstance } from "fastify";
+import { z } from "zod";
 import type { SessionSigner } from "../../security/session";
 import type { Store, TenantRecord } from "../../store/types";
+import { pilotUsers } from "../tenants/pilot";
 import { requireSession, type Access } from "./access";
 import { CURRENT_TERMS, PRIVACY_NOTICE, termsAccepted } from "./terms";
+
+const editorsSchema = z.object({
+  editors: z
+    .array(
+      z.object({
+        id: z.string().regex(/^\d+$/),
+        name: z.string().trim().min(1).max(120),
+      }),
+    )
+    .max(50),
+});
 
 export interface SetupRoutesOptions {
   store: Store;
@@ -94,6 +107,69 @@ export async function setupRoutes(app: FastifyInstance, options: SetupRoutesOpti
       return reply.send({ ok: true });
     },
   );
+
+  /** Quem o administrador escolheu para criar regras (o próprio administrador fica implícito). */
+  app.get("/api/v1/setup/editors", async (request, reply) => {
+    const auth = await requireSession(request, reply, deps);
+    if (!auth) return reply;
+    if (!auth.access.settings)
+      return reply.code(403).send({ error: "Sem acesso a Configurações." });
+    const editors: PortalUserRef[] = (await options.store.roles.list(auth.tenant.id))
+      .filter((role) => role.role === "rule_editor")
+      .map((role) => ({ id: role.userId, name: role.userName }));
+    return reply.header("Cache-Control", "no-store").send({ editors });
+  });
+
+  app.put<{ Body: unknown }>("/api/v1/setup/editors", async (request, reply) => {
+    const auth = await requireSession(request, reply, deps);
+    if (!auth) return reply;
+    if (!auth.access.admin) {
+      return reply.code(403).send({ error: "Só o administrador escolhe quem cria regras." });
+    }
+    const parsed = editorsSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: "Lista de usuários inválida." });
+    }
+    const at = now();
+    await options.store.roles.replace(
+      auth.tenant.id,
+      "rule_editor",
+      parsed.data.editors.map((user) => ({ userId: user.id, userName: user.name })),
+      auth.session.userId,
+      at,
+    );
+    await options.store.tenants.update(auth.tenant.id, {
+      config: {
+        ...auth.tenant.config,
+        setup: { ...auth.tenant.config.setup, editorsConfirmedAt: at.toISOString() },
+      },
+    });
+    return reply.send({ ok: true });
+  });
+
+  /**
+   * Um administrador do portal Bitrix24 assume a administração do WorkSeg (quando quem instalou
+   * saiu da empresa). Fora do modo piloto, onde os administradores são os usuários do piloto.
+   */
+  app.post("/api/v1/setup/claim-admin", async (request, reply) => {
+    const auth = await requireSession(request, reply, deps);
+    if (!auth) return reply;
+    if (!auth.session.admin || pilotUsers(auth.tenant)) {
+      return reply
+        .code(403)
+        .send({ error: "Só um administrador do portal Bitrix24 pode assumir a administração." });
+    }
+    await options.store.tenants.update(auth.tenant.id, { installedByUserId: auth.session.userId });
+    request.log.info(
+      {
+        tenantId: auth.tenant.id,
+        from: auth.tenant.installedByUserId ?? null,
+        to: auth.session.userId,
+      },
+      "Administração do WorkSeg assumida por administrador do portal.",
+    );
+    return reply.send({ ok: true });
+  });
 
   app.post("/api/v1/setup/privacy-notice/seen", async (request, reply) => {
     const auth = await requireSession(request, reply, deps);
