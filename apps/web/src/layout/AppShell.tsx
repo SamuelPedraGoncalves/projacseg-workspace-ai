@@ -1,14 +1,17 @@
 import { Dialog } from "@projacseg/ui";
-import { Outlet } from "react-router";
+import { Navigate, Outlet } from "react-router";
 import { useUiStore } from "../app/ui-store";
 import { usePlatform } from "../platform/platform-context";
 import { AssistantDialogContent } from "../features/assistant/AssistantDialog";
 import { DealDetailsDialogContent } from "../features/deals/DealDetailsDialog";
+import { PrivacyNotice } from "../features/setup/PrivacyNotice";
+import { useSetupStatus } from "../features/setup/setup-api";
 import { ThemeDialogContent } from "../features/theme/ThemeDialog";
 import { Sidebar } from "./Sidebar";
 
 export function AppShell() {
-  const { user } = usePlatform();
+  const { user, session } = usePlatform();
+  const setup = useSetupStatus();
   const {
     themeOpen,
     assistantOpen,
@@ -18,6 +21,21 @@ export function AppShell() {
     setAssistantOpen,
     closeDeal,
   } = useUiStore();
+
+  // Com sessão, o WorkSeg só abre depois do primeiro acesso (termos, quem cria regras, mapeamento).
+  if (session && setup.data && setup.data.step !== "done") {
+    return <Navigate to="/configurar" replace />;
+  }
+  if (session && setup.isPending) {
+    return (
+      <p
+        role="status"
+        className="grid min-h-screen place-items-center text-sm text-(--text-secondary)"
+      >
+        Carregando o WorkSeg AI…
+      </p>
+    );
+  }
 
   return (
     <>
@@ -50,6 +68,7 @@ export function AppShell() {
       >
         <DealDetailsDialogContent />
       </Dialog>
+      <PrivacyNotice />
     </>
   );
 }

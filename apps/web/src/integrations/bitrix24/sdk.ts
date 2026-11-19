@@ -30,6 +30,8 @@ export interface Bx24Sdk {
   getDomain(): string;
   /** Conclui a instalação do aplicativo (chamado na página de instalação). */
   installFinish(): void;
+  /** Seletor de usuários do próprio Bitrix24 (vários). */
+  selectUsers(callback: (users: { id: string | number; name: string }[]) => void): void;
   im: {
     /** Abre o messenger do Bitrix24 no diálogo informado (ID do usuário/bot ou "chatXX"). */
     openMessenger(dialogId?: string): void;

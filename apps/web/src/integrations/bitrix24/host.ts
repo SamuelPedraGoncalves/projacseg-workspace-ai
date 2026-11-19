@@ -1,4 +1,4 @@
-import type { UserContext } from "@projacseg/shared";
+import type { PortalUserRef, UserContext } from "@projacseg/shared";
 import { callBx24, type Bx24Sdk } from "./sdk";
 
 /** Campos de `user.current` usados pela aplicação. */
@@ -55,6 +55,20 @@ export class Bitrix24Host {
    */
   openMessenger(dialogId: string): void {
     this.sdk.im.openMessenger(dialogId);
+  }
+
+  /** Abre o seletor de usuários do Bitrix24; cancelar devolve lista vazia. */
+  selectUsers(): Promise<PortalUserRef[]> {
+    return new Promise((resolve) => {
+      this.sdk.selectUsers((users) =>
+        resolve((users ?? []).map((user) => ({ id: String(user.id), name: user.name }))),
+      );
+    });
+  }
+
+  /** Abre a estrutura da empresa no Bitrix24 (é lá que ela é atualizada). */
+  openCompanyStructure(): void {
+    this.sdk.openPath("/company/vis_structure.php");
   }
 
   /** Conclui a instalação; o Bitrix24 passa a abrir o aplicativo pelo handler. */

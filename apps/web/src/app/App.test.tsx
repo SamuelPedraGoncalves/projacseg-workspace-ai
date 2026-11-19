@@ -43,6 +43,9 @@ function bitrixPlatform(
     openAssistant: vi.fn(async () => assistantResult),
     installer: { assistantStatus: vi.fn(async () => "ready" as const), finish: vi.fn() },
     journey,
+    session: null,
+    pickUsers: null,
+    openCompanyStructure: null,
   };
   return platform;
 }

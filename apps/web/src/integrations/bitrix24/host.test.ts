@@ -11,12 +11,25 @@ function fakeSdk(responses: Record<string, unknown>, errors: Record<string, stri
     openPath: vi.fn(),
     getDomain: () => "projacseg-teste.bitrix24.com.br",
     installFinish: vi.fn(),
+    selectUsers: (callback) => callback([{ id: 51, name: "Ana Souza" }]),
     im: { openMessenger: vi.fn() },
   };
   return sdk;
 }
 
 describe("Bitrix24Host", () => {
+  it("seletor de usuários do Bitrix24 devolve IDs como texto", async () => {
+    await expect(new Bitrix24Host(fakeSdk({})).selectUsers()).resolves.toEqual([
+      { id: "51", name: "Ana Souza" },
+    ]);
+  });
+
+  it("abre a estrutura da empresa no próprio Bitrix24", () => {
+    const sdk = fakeSdk({});
+    new Bitrix24Host(sdk).openCompanyStructure();
+    expect(sdk.openPath).toHaveBeenCalledWith("/company/vis_structure.php");
+  });
+
   it("lê o usuário logado com a foto do perfil", async () => {
     const host = new Bitrix24Host(
       fakeSdk({

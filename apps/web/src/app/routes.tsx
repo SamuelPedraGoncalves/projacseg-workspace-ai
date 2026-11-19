@@ -1,5 +1,6 @@
 import { Navigate, type RouteObject } from "react-router";
 import { InstallPage } from "../features/install/InstallPage";
+import { SetupPage } from "../features/setup/SetupPage";
 import { JourneyPage } from "../features/journey/JourneyPage";
 import { VIEWS } from "../features/journey/views";
 import { AppShell } from "../layout/AppShell";
@@ -11,6 +12,8 @@ import { AppShell } from "../layout/AppShell";
 export const routes: RouteObject[] = [
   // Caminho de instalação configurado no aplicativo Bitrix24 (fora do layout do Workspace).
   { path: "/install", element: <InstallPage /> },
+  // Primeiro acesso do WorkSeg AI (termos, quem cria regras, mapeamento), fora do layout.
+  { path: "/configurar", element: <SetupPage /> },
   {
     element: <AppShell />,
     children: [

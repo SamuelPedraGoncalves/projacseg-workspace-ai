@@ -1,4 +1,4 @@
-import type { UserContext } from "@projacseg/shared";
+import type { PortalUserRef, UserContext } from "@projacseg/shared";
 import { getDemoUser } from "../config/session";
 import { fetchAssistantStatus, type AssistantStatus } from "../features/assistant/assistant-api";
 import {
@@ -35,6 +35,12 @@ export interface Platform {
   installer: AppInstaller | null;
   /** De onde vêm negócios e indicadores: demonstração ou API (motor de regras + CRM). */
   journey: JourneyRepository;
+  /** Sessão assinada do WorkSeg (API). `null` na demonstração ou antes da instalação. */
+  session: string | null;
+  /** Seletor de usuários do Bitrix24. `null` fora do portal. */
+  pickUsers: (() => Promise<PortalUserRef[]>) | null;
+  /** Abre a estrutura da empresa no Bitrix24. `null` fora do portal. */
+  openCompanyStructure: (() => void) | null;
 }
 
 export interface AppInstaller {
@@ -54,6 +60,9 @@ export function createDemoPlatform(user: UserContext = getDemoUser()): Platform 
     openAssistant: async () => "demo",
     installer: null,
     journey: new DemoJourneyRepository(),
+    session: null,
+    pickUsers: null,
+    openCompanyStructure: null,
   };
 }
 
@@ -98,6 +107,9 @@ export function createBitrix24Platform(
     },
     // Sem sessão (portal ainda não instalado no backend), mostra a demonstração.
     journey: session ? new ApiJourneyRepository(session) : new DemoJourneyRepository(),
+    session,
+    pickUsers: () => host.selectUsers(),
+    openCompanyStructure: () => host.openCompanyStructure(),
   };
 }
 
