@@ -6,6 +6,7 @@ import { randomBytes } from "node:crypto";
 import qs from "qs";
 import type { Env } from "./config/env";
 import { AssistantBot, type Messenger } from "./integrations/bitrix24/bot-messenger";
+import { readCompanyCalendar } from "./integrations/bitrix24/company-calendar";
 import { CrmReader } from "./integrations/bitrix24/crm-reader";
 import { PortalEventVerifier } from "./integrations/bitrix24/event-verifier";
 import { HierarchyResolver } from "./integrations/bitrix24/hierarchy";
@@ -201,6 +202,7 @@ export async function buildApp(env: Env, deps: AppDeps = {}): Promise<FastifyIns
     now,
     ...(deps.terms ? { terms: deps.terms } : {}),
     catalog: async (tenant) => toMappingCatalog(await crm.catalog(tenant, true)),
+    readCalendar: (tenant) => readCompanyCalendar(portal, tenant, now()),
     onMappingSaved: (tenant) => {
       void crm.catalog(tenant, true).catch((error: unknown) => {
         app.log.warn({ err: error }, "Catálogo do CRM não recarregado após o mapeamento.");

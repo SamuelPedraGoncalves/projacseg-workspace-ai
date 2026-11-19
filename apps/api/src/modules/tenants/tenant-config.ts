@@ -97,6 +97,8 @@ export const DEFAULT_TENANT_CONFIG: TenantConfig = {
 export interface TenantFile {
   config: TenantConfig;
   rules: RuleDefinition[];
+  /** O arquivo define o calendário (vale como ajuste manual: não é importado do Bitrix24). */
+  calendarDeclared: boolean;
 }
 
 const safeName = (domain: string) => domain.toLowerCase().replace(/[^a-z0-9.-]/g, "_");
@@ -126,6 +128,7 @@ export async function loadTenantFile(dir: string, domain: string): Promise<Tenan
       ...(file.assistant ? { assistant: file.assistant } : {}),
     },
     rules,
+    calendarDeclared: file.calendar !== undefined,
   };
 }
 

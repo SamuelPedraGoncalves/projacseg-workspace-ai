@@ -1,5 +1,6 @@
 import type { FastifyBaseLogger } from "fastify";
 import type { AssistantBot } from "../../integrations/bitrix24/bot-messenger";
+import { readCompanyCalendar } from "../../integrations/bitrix24/company-calendar";
 import type { CrmReader } from "../../integrations/bitrix24/crm-reader";
 import type { Bitrix24Portal } from "../../integrations/bitrix24/portal";
 import type { Bitrix24RestClient } from "../../integrations/bitrix24/rest-client";
@@ -99,6 +100,38 @@ export class BitrixAppService {
   }
 
   /**
+   * Calendário da empresa lido do Bitrix24 (`calendar.settings.get`). Não sobrescreve um calendário
+   * ajustado na tela nem o declarado no arquivo da empresa. Falha na leitura não impede a instalação.
+   */
+  private async importCalendar(
+    tenant: TenantRecord,
+    declaredInFile: boolean,
+  ): Promise<TenantRecord> {
+    const setup = tenant.config.setup ?? {};
+    if (declaredInFile) {
+      return this.deps.store.tenants.update(tenant.id, {
+        config: { ...tenant.config, setup: { ...setup, calendarSource: "manual" } },
+      });
+    }
+    if (setup.calendarSource === "manual") return tenant;
+    try {
+      const calendar = await readCompanyCalendar(this.deps.portal, tenant, new Date());
+      return await this.deps.store.tenants.update(tenant.id, {
+        config: { ...tenant.config, calendar, setup: { ...setup, calendarSource: "bitrix24" } },
+      });
+    } catch (error) {
+      this.deps.log.warn(
+        { err: error, domain: tenant.domain },
+        "Calendário da empresa não lido do Bitrix24 (confira o escopo calendar); mantido o atual.",
+      );
+      if (setup.calendarSource) return tenant;
+      return this.deps.store.tenants.update(tenant.id, {
+        config: { ...tenant.config, setup: { ...setup, calendarSource: "default" } },
+      });
+    }
+  }
+
+  /**
    * Instalação: guarda os tokens do aplicativo (criptografados) para o motor trabalhar sem ninguém
    * logado, liga os eventos de negócios, carrega as regras da empresa e devolve a sessão do admin.
    */
@@ -136,6 +169,10 @@ export class BitrixAppService {
           }
         : {}),
       ...(configured?.setup ? { setup: configured.setup } : {}),
+      // Calendário: o do arquivo, se ele declarar um; senão o que já estava gravado.
+      calendar: file?.calendarDeclared
+        ? file.config.calendar
+        : (configured?.calendar ?? base.calendar),
     };
     let tenant = await this.deps.store.tenants.upsert({
       domain,
@@ -155,6 +192,7 @@ export class BitrixAppService {
       expiresAt: new Date(Date.now() + Number(frame.authExpires ?? 3600) * 1000),
     });
     if (file) await this.deps.store.rules.replaceAll(tenant.id, file.rules);
+    tenant = await this.importCalendar(tenant, Boolean(file?.calendarDeclared));
 
     const handler = `${publicUrl}/bitrix24/events/crm`;
     for (const event of CRM_EVENTS) {

@@ -419,3 +419,63 @@ describe("mapeamento dos campos", () => {
     await app.close();
   });
 });
+
+describe("calendário em Configurações", () => {
+  const CALENDAR = {
+    utcOffsetMinutes: -180,
+    workdays: [1, 2, 3, 4, 5],
+    workStart: "08:00",
+    workEnd: "18:00",
+    holidays: ["2026-12-25"],
+  };
+
+  it("mostra o calendário e a origem; relê do Bitrix24; ajuste manual valida e grava", async () => {
+    const rest = fakeRest({ "calendar.settings.get": { work_time_start: "9" } });
+    const { app, store } = await testApp({}, { restClient: rest.client });
+    const tenant = await setup(store, { setup: { calendarSource: "default" } });
+    const call = (method: "GET" | "POST" | "PUT", url: string, payload?: unknown, userId = ADMIN) =>
+      app.inject({
+        method,
+        url,
+        headers: bearer(tenant, userId),
+        ...(payload ? { payload: payload as Record<string, unknown> } : {}),
+      });
+
+    expect((await call("GET", "/api/v1/setup/calendar")).json()).toMatchObject({
+      source: "default",
+      calendar: { workStart: "08:00" },
+    });
+
+    const imported = await call("POST", "/api/v1/setup/calendar/import");
+    expect(imported.statusCode).toBe(200);
+    expect(imported.json()).toMatchObject({ source: "bitrix24", calendar: { workStart: "09:00" } });
+
+    expect(
+      (await call("PUT", "/api/v1/setup/calendar", { ...CALENDAR, workStart: "8h" })).statusCode,
+    ).toBe(400);
+    const saved = await call("PUT", "/api/v1/setup/calendar", CALENDAR);
+    expect(saved.statusCode).toBe(200);
+    const config = (await store.tenants.findById(tenant.id))!.config;
+    expect(config.calendar).toEqual(CALENDAR);
+    expect(config.setup?.calendarSource).toBe("manual");
+
+    expect((await call("GET", "/api/v1/setup/calendar", undefined, "51")).statusCode).toBe(403);
+    expect((await call("PUT", "/api/v1/setup/calendar", CALENDAR, "51")).statusCode).toBe(403);
+    await app.close();
+  });
+
+  it("falha do Bitrix24 ao reler → 502 e nada muda", async () => {
+    const rest = fakeRest({ "calendar.settings.get": new Error("insufficient_scope") });
+    const { app, store } = await testApp({}, { restClient: rest.client });
+    const tenant = await setup(store, { setup: { calendarSource: "default" } });
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/v1/setup/calendar/import",
+      headers: bearer(tenant, ADMIN),
+    });
+    expect(response.statusCode).toBe(502);
+    expect(response.json().error).toMatch(/calendário/i);
+    expect((await store.tenants.findById(tenant.id))?.config.setup?.calendarSource).toBe("default");
+    await app.close();
+  });
+});

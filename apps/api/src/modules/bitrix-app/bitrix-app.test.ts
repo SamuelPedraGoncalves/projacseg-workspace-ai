@@ -187,6 +187,89 @@ describe("instalação e abertura no Bitrix24", () => {
     await second.app.close();
   });
 
+  it("calendário: lido do Bitrix24 na instalação; falha não impede; arquivo e ajuste manual prevalecem", async () => {
+    const dist = webDist();
+    const empty = mkdtempSync(join(tmpdir(), "tenants-"));
+    const portalWith = (calendar: unknown) =>
+      fakeRest({
+        "app.info": { CODE: "local.app.1" },
+        "user.current": { ID: "7", NAME: "Admin" },
+        "user.admin": true,
+        "event.bind": true,
+        "crm.category.list": { categories: [] },
+        "crm.status.list": [],
+        "calendar.settings.get": calendar,
+      });
+    const request = {
+      ...frame({ AUTH_ID: "a", REFRESH_ID: "r", AUTH_EXPIRES: "3600", member_id: "membro-1" }),
+      url: `/install?DOMAIN=${DOMAIN}&APP_SID=abc`,
+    };
+
+    // Lido do Bitrix24.
+    const first = await testApp(
+      { WEB_DIST_DIR: dist, TENANTS_DIR: empty },
+      { restClient: portalWith({ work_time_start: "9", week_holidays: ["SA", "SU"] }).client },
+    );
+    await first.app.inject(request);
+    let tenant = (await first.store.tenants.findByMemberId("membro-1"))!;
+    expect(tenant.config.calendar.workStart).toBe("09:00");
+    expect(tenant.config.setup?.calendarSource).toBe("bitrix24");
+    await first.app.close();
+
+    // Falha na leitura (ex.: escopo calendar ainda não liberado): instala com o calendário atual.
+    const failing = await testApp(
+      { WEB_DIST_DIR: dist, TENANTS_DIR: empty },
+      { restClient: portalWith(new Error("insufficient_scope")).client, store: first.store },
+    );
+    const response = await failing.app.inject(request);
+    expect(sessionFrom(response.body)).toBeTruthy();
+    tenant = (await failing.store.tenants.findByMemberId("membro-1"))!;
+    expect(tenant.config.calendar.workStart).toBe("09:00");
+    await failing.app.close();
+
+    // Ajuste manual sobrevive à reinstalação.
+    await first.store.tenants.update(tenant.id, {
+      config: {
+        ...tenant.config,
+        calendar: { ...tenant.config.calendar, workStart: "07:30" },
+        setup: { ...tenant.config.setup, calendarSource: "manual" },
+      },
+    });
+    const manual = await testApp(
+      { WEB_DIST_DIR: dist, TENANTS_DIR: empty },
+      { restClient: portalWith({ work_time_start: "10" }).client, store: first.store },
+    );
+    await manual.app.inject(request);
+    expect((await manual.store.tenants.findById(tenant.id))?.config.calendar.workStart).toBe(
+      "07:30",
+    );
+    await manual.app.close();
+
+    // Arquivo da empresa com calendário próprio: não importa do Bitrix24.
+    const withFile = mkdtempSync(join(tmpdir(), "tenants-"));
+    writeFileSync(
+      join(withFile, `${DOMAIN}.json`),
+      JSON.stringify({
+        calendar: {
+          utcOffsetMinutes: -180,
+          workdays: [1, 2, 3, 4, 5],
+          workStart: "08:00",
+          workEnd: "18:00",
+          holidays: ["2026-11-20"],
+        },
+      }),
+    );
+    const fromFile = await testApp(
+      { WEB_DIST_DIR: dist, TENANTS_DIR: withFile },
+      { restClient: portalWith({ work_time_start: "10" }).client },
+    );
+    await fromFile.app.inject(request);
+    const fileTenant = (await fromFile.store.tenants.findByMemberId("membro-1"))!;
+    expect(fileTenant.config.calendar.holidays).toEqual(["2026-11-20"]);
+    expect(fileTenant.config.setup?.calendarSource).toBe("manual");
+    await fromFile.app.close();
+  });
+
   it("recusa instalação por quem não é administrador", async () => {
     const { app, store } = await testApp(
       { WEB_DIST_DIR: webDist() },

@@ -1,4 +1,7 @@
+import { businessCalendarSchema } from "@projacseg/engine";
 import type {
+  CalendarView,
+  CompanyCalendar,
   MappingCatalog,
   MappingInput,
   MappingView,
@@ -37,6 +40,8 @@ export interface SetupRoutesOptions {
   catalog?: (tenant: TenantRecord) => Promise<MappingCatalog>;
   /** Mapeamento salvo: recarregar o catálogo do CRM e ressincronizar os negócios. */
   onMappingSaved?: (tenant: TenantRecord) => void;
+  /** Lê o calendário da empresa no Bitrix24. */
+  readCalendar?: (tenant: TenantRecord) => Promise<CompanyCalendar>;
 }
 
 function currentMapping(tenant: TenantRecord): MappingInput | null {
@@ -231,6 +236,67 @@ export async function setupRoutes(app: FastifyInstance, options: SetupRoutesOpti
     });
     options.onMappingSaved?.(updated);
     return reply.send({ ok: true });
+  });
+
+  const calendarView = (tenant: TenantRecord): CalendarView => ({
+    calendar: tenant.config.calendar,
+    source: tenant.config.setup?.calendarSource ?? "default",
+  });
+
+  app.get("/api/v1/setup/calendar", async (request, reply) => {
+    const auth = await requireSession(request, reply, deps);
+    if (!auth) return reply;
+    if (!auth.access.settings)
+      return reply.code(403).send({ error: "Sem acesso a Configurações." });
+    return reply.header("Cache-Control", "no-store").send(calendarView(auth.tenant));
+  });
+
+  /** Relê o calendário do Bitrix24 (expediente, folgas e feriados). */
+  app.post("/api/v1/setup/calendar/import", async (request, reply) => {
+    const auth = await requireSession(request, reply, deps);
+    if (!auth) return reply;
+    if (!auth.access.settings)
+      return reply.code(403).send({ error: "Sem acesso a Configurações." });
+    if (!options.readCalendar)
+      return reply.code(503).send({ error: "Leitura do portal indisponível." });
+    let calendar: CompanyCalendar;
+    try {
+      calendar = await options.readCalendar(auth.tenant);
+    } catch (error) {
+      request.log.warn({ err: error }, "Calendário não lido do Bitrix24.");
+      return reply.code(502).send({
+        error:
+          "Não foi possível ler o calendário da empresa no Bitrix24. Confira se o app tem a permissão de calendário.",
+      });
+    }
+    const updated = await options.store.tenants.update(auth.tenant.id, {
+      config: {
+        ...auth.tenant.config,
+        calendar,
+        setup: { ...auth.tenant.config.setup, calendarSource: "bitrix24" },
+      },
+    });
+    return reply.send(calendarView(updated));
+  });
+
+  /** Ajuste manual: passa a valer no lugar do calendário do Bitrix24. */
+  app.put<{ Body: unknown }>("/api/v1/setup/calendar", async (request, reply) => {
+    const auth = await requireSession(request, reply, deps);
+    if (!auth) return reply;
+    if (!auth.access.settings)
+      return reply.code(403).send({ error: "Sem acesso a Configurações." });
+    const parsed = businessCalendarSchema.safeParse(request.body);
+    if (!parsed.success || parsed.data.workEnd <= parsed.data.workStart) {
+      return reply.code(400).send({ error: "Calendário inválido." });
+    }
+    const updated = await options.store.tenants.update(auth.tenant.id, {
+      config: {
+        ...auth.tenant.config,
+        calendar: parsed.data,
+        setup: { ...auth.tenant.config.setup, calendarSource: "manual" },
+      },
+    });
+    return reply.send(calendarView(updated));
   });
 
   app.post("/api/v1/setup/privacy-notice/seen", async (request, reply) => {

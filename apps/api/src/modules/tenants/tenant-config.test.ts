@@ -24,6 +24,7 @@ describe("configuração por empresa", () => {
     expect(await loadTenantFile(dir, "a.bitrix24.com")).toEqual({
       config: DEFAULT_TENANT_CONFIG,
       rules: [],
+      calendarDeclared: false,
     });
     expect(await loadTenantFile(dir, "b.bitrix24.com")).toBeNull();
   });

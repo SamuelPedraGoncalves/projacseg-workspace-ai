@@ -41,7 +41,10 @@ Não use o portal de produção da ProjacSeg sem autorização.
 | Caminho do manipulador        | `https://<url-pública>/`                               |
 | Caminho de instalação inicial | `https://<url-pública>/install`                        |
 | Nome do item de menu          | `Minha Jornada`                                        |
-| Permissões                    | `crm`, `user`, `department`, `im`, `imbot`             |
+| Permissões                    | `crm`, `user`, `department`, `im`, `imbot`, `calendar` |
+
+A permissão `calendar` é usada só para ler o expediente, as folgas e os feriados da empresa
+(`calendar.settings.get`). Sem ela, a instalação funciona e o calendário fica no padrão (seg–sex, 8h–18h).
 
 Salve e anote o **client_id** e o **client_secret** (vão só para o `.env` do servidor).
 

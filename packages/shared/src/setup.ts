@@ -66,3 +66,21 @@ export interface MappingView {
   suggestion: MappingSuggestion;
   confirmed: boolean;
 }
+
+/** Calendário útil da corretora (mesmo formato do motor de regras). */
+export interface CompanyCalendar {
+  utcOffsetMinutes: number;
+  /** 0 = domingo … 6 = sábado. */
+  workdays: number[];
+  workStart: string;
+  workEnd: string;
+  /** "AAAA-MM-DD". */
+  holidays: string[];
+}
+
+export type CalendarSource = "bitrix24" | "default" | "manual";
+
+export interface CalendarView {
+  calendar: CompanyCalendar;
+  source: CalendarSource;
+}
