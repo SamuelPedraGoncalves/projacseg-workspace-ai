@@ -33,3 +33,6 @@ apps/api/tenants/*.catalog.json
 
 # Material privado do cliente (exportações originais, mapas de pseudônimos) — nunca versionar
 data/private/
+
+# Rascunhos do brainstorming e registros de execução de planos
+.superpowers/
