@@ -30,7 +30,13 @@ falsos; **ainda não conferido no portal**.
 
 - A IA só responde depois que o administrador aceita a versão vigente dos termos; aceitar liga a IA
   da corretora. Termos com versão nova desligam a IA até o novo aceite.
-- Reinstalar mantém instalador, papéis, aceites, mapeamento confirmado e calendário ajustado.
+- Reinstalar mantém instalador, papéis, aceites, mapeamento confirmado e calendário ajustado na tela
+  (que vale mais que o calendário do arquivo da empresa).
+- Feriados que se repetem todo ano ficam guardados como mês-dia e são somados ao calendário em cada
+  ano pelo motor e pelo painel (não "congelam" nos anos importados).
+- Nenhum campo do mapeamento é obrigatório: corretora sem ramo ou tipo do seguro conclui o primeiro
+  acesso, e a função que depende do campo fica desligada.
+- Administrador do portal Bitrix24 pode assumir a administração pela tela de espera (fora do piloto).
 - O teste do PostgreSQL (PGlite) usa uma porta livre escolhida pelo sistema.
 
 ## [0.9.0] — 18/11/2026 — Assistente age no CRM pelo chat
