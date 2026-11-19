@@ -1,5 +1,6 @@
 import { Navigate, type RouteObject } from "react-router";
 import { InstallPage } from "../features/install/InstallPage";
+import { SettingsPage } from "../features/settings/SettingsPage";
 import { SetupPage } from "../features/setup/SetupPage";
 import { JourneyPage } from "../features/journey/JourneyPage";
 import { VIEWS } from "../features/journey/views";
@@ -21,6 +22,7 @@ export const routes: RouteObject[] = [
         path,
         element: <JourneyPage key={view} view={view} />,
       })),
+      { path: "/configuracoes", element: <SettingsPage /> },
       { path: "*", element: <Navigate to="/" replace /> },
     ],
   },

@@ -7,6 +7,7 @@ import {
   Hourglass,
   Menu,
   Palette,
+  Settings,
   Sparkles,
   X,
   type LucideIcon,
@@ -15,6 +16,7 @@ import { useId, useState, type ComponentProps } from "react";
 import { NavLink } from "react-router";
 import { useUiStore } from "../app/ui-store";
 import { VIEWS } from "../features/journey/views";
+import { useSetupStatus } from "../features/setup/setup-api";
 import { useWorkspaceActions } from "../platform/use-workspace-actions";
 
 const NAV_ITEMS: { path: string; label: string; icon: LucideIcon }[] = [
@@ -49,6 +51,7 @@ export function Sidebar() {
   const menuId = useId();
   const { openAssistant } = useWorkspaceActions();
   const setThemeOpen = useUiStore((state) => state.setThemeOpen);
+  const setup = useSetupStatus();
   const closeMenu = () => setMenuOpen(false);
 
   return (
@@ -121,6 +124,14 @@ export function Sidebar() {
                 {VIEWS.resolved.pageTitle}
               </NavLink>
             </li>
+            {setup.data?.access.settings ? (
+              <li>
+                <NavLink to="/configuracoes" className={itemClass} onClick={closeMenu}>
+                  <Settings className="size-[18px]" aria-hidden="true" />
+                  Configurações
+                </NavLink>
+              </li>
+            ) : null}
           </ul>
         </nav>
 
