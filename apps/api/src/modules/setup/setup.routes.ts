@@ -2,6 +2,7 @@ import { businessCalendarSchema } from "@projacseg/engine";
 import type {
   CalendarView,
   CompanyCalendar,
+  DepartmentNode,
   MappingCatalog,
   MappingInput,
   MappingView,
@@ -42,6 +43,8 @@ export interface SetupRoutesOptions {
   onMappingSaved?: (tenant: TenantRecord) => void;
   /** Lê o calendário da empresa no Bitrix24. */
   readCalendar?: (tenant: TenantRecord) => Promise<CompanyCalendar>;
+  /** Lê a estrutura da empresa no Bitrix24. */
+  readStructure?: (tenant: TenantRecord) => Promise<DepartmentNode[]>;
 }
 
 function currentMapping(tenant: TenantRecord): MappingInput | null {
@@ -297,6 +300,24 @@ export async function setupRoutes(app: FastifyInstance, options: SetupRoutesOpti
       },
     });
     return reply.send(calendarView(updated));
+  });
+
+  app.get("/api/v1/setup/structure", async (request, reply) => {
+    const auth = await requireSession(request, reply, deps);
+    if (!auth) return reply;
+    if (!auth.access.settings)
+      return reply.code(403).send({ error: "Sem acesso a Configurações." });
+    if (!options.readStructure)
+      return reply.code(503).send({ error: "Leitura do portal indisponível." });
+    try {
+      const departments = await options.readStructure(auth.tenant);
+      return reply.header("Cache-Control", "no-store").send({ source: "bitrix24", departments });
+    } catch (error) {
+      request.log.warn({ err: error }, "Estrutura da empresa não lida do Bitrix24.");
+      return reply
+        .code(502)
+        .send({ error: "Não foi possível ler a estrutura da empresa no Bitrix24." });
+    }
   });
 
   app.post("/api/v1/setup/privacy-notice/seen", async (request, reply) => {

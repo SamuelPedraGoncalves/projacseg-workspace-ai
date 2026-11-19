@@ -84,3 +84,11 @@ export interface CalendarView {
   calendar: CompanyCalendar;
   source: CalendarSource;
 }
+
+/** Departamento da estrutura da empresa, com o chefe e os subdepartamentos. */
+export interface DepartmentNode {
+  id: string;
+  name: string;
+  head: PortalUserRef | null;
+  children: DepartmentNode[];
+}

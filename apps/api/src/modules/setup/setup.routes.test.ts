@@ -479,3 +479,61 @@ describe("calendário em Configurações", () => {
     await app.close();
   });
 });
+
+describe("estrutura da empresa em Configurações", () => {
+  it("devolve a árvore lida do Bitrix24, com o nome dos chefes", async () => {
+    const rest = fakeRest({
+      "department.get": [
+        { ID: "1", NAME: "Corretora", UF_HEAD: "10" },
+        { ID: "3", NAME: "Vendas", PARENT: "1" },
+      ],
+      "user.get": (params: Record<string, unknown>) =>
+        params.ID === "10" ? [{ ID: "10", NAME: "Marta", LAST_NAME: "Lima" }] : [],
+    });
+    const { app, store } = await testApp({}, { restClient: rest.client });
+    const tenant = await setup(store);
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/v1/setup/structure",
+      headers: bearer(tenant, ADMIN),
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      source: "bitrix24",
+      departments: [
+        {
+          id: "1",
+          name: "Corretora",
+          head: { id: "10", name: "Marta Lima" },
+          children: [{ id: "3", name: "Vendas", head: null, children: [] }],
+        },
+      ],
+    });
+    expect(
+      (
+        await app.inject({
+          method: "GET",
+          url: "/api/v1/setup/structure",
+          headers: bearer(tenant, "51"),
+        })
+      ).statusCode,
+    ).toBe(403);
+    await app.close();
+  });
+
+  it("falha do portal → 502 com mensagem clara", async () => {
+    const rest = fakeRest({ "department.get": new Error("ACCESS_DENIED") });
+    const { app, store } = await testApp({}, { restClient: rest.client });
+    const tenant = await setup(store);
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/v1/setup/structure",
+      headers: bearer(tenant, ADMIN),
+    });
+    expect(response.statusCode).toBe(502);
+    expect(response.json()).toEqual({
+      error: "Não foi possível ler a estrutura da empresa no Bitrix24.",
+    });
+    await app.close();
+  });
+});

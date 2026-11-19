@@ -1,8 +1,9 @@
 import type { TenantRecord } from "../../store/types";
 import type { Bitrix24Portal } from "./portal";
 
-interface Department {
+export interface Department {
   ID: string;
+  NAME?: string;
   PARENT?: string;
   UF_HEAD?: string;
 }
@@ -20,7 +21,8 @@ export class HierarchyResolver {
 
   constructor(private readonly portal: Bitrix24Portal) {}
 
-  private async departments(tenant: TenantRecord): Promise<Map<string, Department>> {
+  /** Departamentos do portal (cache de 30 min). Também usado pela tela de estrutura. */
+  async departments(tenant: TenantRecord): Promise<Map<string, Department>> {
     const cached = this.cache.get(tenant.id);
     if (cached && Date.now() - cached.at < TTL_MS) return cached.departments;
     const list = await this.portal.callAll<Department>(tenant, "department.get", {});
