@@ -9,6 +9,7 @@ const SOURCE_LABEL: Record<CalendarSource, string> = {
   bitrix24: "Lido do Bitrix24",
   default: "Padrão (seg–sex, 8h–18h)",
   manual: "Ajustado aqui",
+  file: "Definido no arquivo da empresa",
 };
 
 const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];

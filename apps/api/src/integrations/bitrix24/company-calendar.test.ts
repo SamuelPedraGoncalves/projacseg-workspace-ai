@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { toBusinessCalendar } from "./company-calendar";
+import { recurringHolidays, toBusinessCalendar } from "./company-calendar";
 
 const YEARS = [2026, 2027];
 
@@ -76,5 +76,32 @@ describe("calendário da empresa a partir de calendar.settings.get", () => {
   it("fim antes do início volta ao padrão", () => {
     const calendar = toBusinessCalendar({ work_time_start: "19", work_time_end: "9" }, YEARS, -180);
     expect(calendar).toMatchObject({ workStart: "08:00", workEnd: "18:00" });
+  });
+});
+
+describe("formatos inesperados de calendar.settings.get", () => {
+  it("folgas como objeto ou texto e feriados como lista também funcionam", () => {
+    const calendar = toBusinessCalendar(
+      {
+        work_time_start: "9",
+        week_holidays: { 0: "SA", 1: "SU" } as unknown as string[],
+        year_holidays: ["01.01", "25.12"] as unknown as string,
+      },
+      [2026],
+      -180,
+    );
+    expect(calendar.workdays).toEqual([1, 2, 3, 4, 5]);
+    expect(calendar.holidays).toEqual(["2026-01-01", "2026-12-25"]);
+    expect(
+      toBusinessCalendar({ week_holidays: "SA,SU" as unknown as string[] }, [2026], -180).workdays,
+    ).toEqual([1, 2, 3, 4, 5]);
+  });
+});
+
+describe("feriados que se repetem todo ano", () => {
+  it("são devolvidos como mês-dia para não congelar em dois anos", () => {
+    expect(
+      recurringHolidays({ year_holidays: "01.01,25.12,02.11", year_workdays: "02.11" }),
+    ).toEqual(["01-01", "12-25"]);
   });
 });

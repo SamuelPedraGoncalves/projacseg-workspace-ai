@@ -7,6 +7,7 @@ import {
 } from "@projacseg/engine";
 import type { FastifyBaseLogger } from "fastify";
 import type { DealSnapshotRecord, OccurrenceRecord, Store, TenantRecord } from "../../store/types";
+import { effectiveCalendar } from "../tenants/calendar";
 import { inPilot, observerOf } from "../tenants/pilot";
 import { dealLink, engineMessages } from "./messages";
 import type { DealSource, Notifier, SuperiorResolver } from "./ports";
@@ -94,9 +95,16 @@ export class EngineService {
   async evaluate(tenant: TenantRecord, deal: DealSnapshotRecord): Promise<void> {
     const rules = await this.deps.store.rules.list(tenant.id);
     const open = await this.deps.store.occurrences.listOpenByDeal(tenant.id, deal.dealId);
-    const commands = evaluateDeal(toState(deal), rules, open, tenant.config.calendar, this.now(), {
-      roles: tenant.config.roles ?? {},
-    });
+    const commands = evaluateDeal(
+      toState(deal),
+      rules,
+      open,
+      effectiveCalendar(tenant.config, this.now()),
+      this.now(),
+      {
+        roles: tenant.config.roles ?? {},
+      },
+    );
     if (commands.length === 0) return;
 
     const rulesByCode = new Map(rules.map((rule) => [rule.code, rule]));
@@ -209,7 +217,7 @@ export class EngineService {
     open: Map<string, OccurrenceRecord>,
   ): Promise<void> {
     const { store } = this.deps;
-    const calendar = tenant.config.calendar;
+    const calendar = effectiveCalendar(tenant.config, this.now());
     const link = dealLink(tenant.domain, deal.dealId, deal.title);
 
     if (command.type === "open") {

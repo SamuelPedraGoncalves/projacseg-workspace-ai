@@ -78,7 +78,7 @@ export interface CompanyCalendar {
   holidays: string[];
 }
 
-export type CalendarSource = "bitrix24" | "default" | "manual";
+export type CalendarSource = "bitrix24" | "default" | "manual" | "file";
 
 export interface CalendarView {
   calendar: CompanyCalendar;

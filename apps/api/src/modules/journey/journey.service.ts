@@ -5,6 +5,7 @@ import {
   type JourneyProjection,
 } from "@projacseg/engine";
 import type { Store, TenantRecord } from "../../store/types";
+import { effectiveCalendar } from "../tenants/calendar";
 import { pilotUsers } from "../tenants/pilot";
 
 /** Dashboard "Minha Jornada" de um colaborador, calculado pelo motor (sem IA). */
@@ -15,7 +16,8 @@ export async function buildJourney(
   now: Date,
 ): Promise<JourneyProjection> {
   const deals = await store.deals.listByAssignee(tenant.id, userId);
-  const startOfDay = atLocalTime(now, "00:00", tenant.config.calendar);
+  const calendar = effectiveCalendar(tenant.config, now);
+  const startOfDay = atLocalTime(now, "00:00", calendar);
   const [occurrences, rules] = await Promise.all([
     store.occurrences.listForDeals(
       tenant.id,
@@ -29,7 +31,7 @@ export async function buildJourney(
     deals,
     occurrences,
     rules,
-    calendar: tenant.config.calendar,
+    calendar,
     now,
     // No modo piloto o superior (fora do piloto) não recebe o aviso: só fica registrado.
     escalationNotified: (occurrence, rule) =>

@@ -31,13 +31,31 @@ function toTime(value: string | number | undefined): string | null {
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 }
 
+/** Lista vinda do PHP do Bitrix24: array, objeto indexado ou texto separado por vírgula. */
+function asList(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map(String);
+  if (value && typeof value === "object") return Object.values(value).map(String);
+  if (typeof value === "string") return value.split(",");
+  return [];
+}
+
 /** "01.01,25.12" → ["01-01", "12-25"] (mês-dia), ignorando itens inválidos. */
-function monthDays(list: string | undefined): string[] {
-  return (list ?? "")
-    .split(",")
+function monthDays(list: unknown): string[] {
+  return asList(list)
     .map((item) => /^(\d{1,2})\.(\d{1,2})$/.exec(item.trim()))
     .filter((match): match is RegExpExecArray => match !== null)
     .map(([, day, month]) => `${month!.padStart(2, "0")}-${day!.padStart(2, "0")}`);
+}
+
+/**
+ * Feriados que se repetem todo ano ("MM-DD"), sem os dias úteis extras. Guardados à parte para que o
+ * calendário não "congele" nos anos expandidos na leitura.
+ */
+export function recurringHolidays(settings: CalendarSettings): string[] {
+  const extraWorkdays = new Set(monthDays(settings.year_workdays));
+  return [
+    ...new Set(monthDays(settings.year_holidays).filter((day) => !extraWorkdays.has(day))),
+  ].sort();
 }
 
 /**
@@ -57,18 +75,15 @@ export function toBusinessCalendar(
   }
 
   const off = new Set(
-    (settings.week_holidays ?? [])
-      .map((code) => WEEKDAY[code.toUpperCase()])
+    asList(settings.week_holidays)
+      .map((code) => WEEKDAY[code.trim().toUpperCase()])
       .filter((day): day is number => day !== undefined),
   );
   const workdays =
     off.size === 0 ? DEFAULT_WORKDAYS : [0, 1, 2, 3, 4, 5, 6].filter((day) => !off.has(day));
 
-  const extraWorkdays = new Set(monthDays(settings.year_workdays));
   const holidays = years.flatMap((year) =>
-    monthDays(settings.year_holidays)
-      .filter((monthDay) => !extraWorkdays.has(monthDay))
-      .map((monthDay) => `${year}-${monthDay}`),
+    recurringHolidays(settings).map((monthDay) => `${year}-${monthDay}`),
   );
 
   return businessCalendarSchema.parse({
@@ -80,17 +95,27 @@ export function toBusinessCalendar(
   });
 }
 
+export interface CompanyCalendarRead {
+  calendar: BusinessCalendar;
+  /** Feriados que se repetem todo ano ("MM-DD"). */
+  recurringHolidays: string[];
+}
+
 /** Lê o calendário do portal (escopo `calendar`). Feriados do ano corrente e do seguinte. */
 export async function readCompanyCalendar(
   portal: Bitrix24Portal,
   tenant: TenantRecord,
   now: Date,
-): Promise<BusinessCalendar> {
+): Promise<CompanyCalendarRead> {
   const response = await portal.call<CalendarSettings>(tenant, "calendar.settings.get", {});
+  const settings = response.result ?? {};
   const year = now.getUTCFullYear();
-  return toBusinessCalendar(
-    response.result ?? {},
-    [year, year + 1],
-    tenant.config.calendar.utcOffsetMinutes,
-  );
+  return {
+    calendar: toBusinessCalendar(
+      settings,
+      [year, year + 1],
+      tenant.config.calendar.utcOffsetMinutes,
+    ),
+    recurringHolidays: recurringHolidays(settings),
+  };
 }

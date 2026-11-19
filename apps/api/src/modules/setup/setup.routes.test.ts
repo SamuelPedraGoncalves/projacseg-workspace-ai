@@ -430,8 +430,13 @@ describe("calendário em Configurações", () => {
   };
 
   it("mostra o calendário e a origem; relê do Bitrix24; ajuste manual valida e grava", async () => {
-    const rest = fakeRest({ "calendar.settings.get": { work_time_start: "9" } });
-    const { app, store } = await testApp({}, { restClient: rest.client });
+    const rest = fakeRest({
+      "calendar.settings.get": { work_time_start: "9", year_holidays: "01.01,25.12" },
+    });
+    const { app, store } = await testApp(
+      {},
+      { restClient: rest.client, now: () => new Date("2026-11-19T12:00:00Z") },
+    );
     const tenant = await setup(store, { setup: { calendarSource: "default" } });
     const call = (method: "GET" | "POST" | "PUT", url: string, payload?: unknown, userId = ADMIN) =>
       app.inject({
@@ -458,6 +463,8 @@ describe("calendário em Configurações", () => {
     const config = (await store.tenants.findById(tenant.id))!.config;
     expect(config.calendar).toEqual(CALENDAR);
     expect(config.setup?.calendarSource).toBe("manual");
+    // A data de 2026-12-25 ficou na lista salva; 01/01 não: só o Natal continua recorrente.
+    expect(config.recurringHolidays).toEqual(["12-25"]);
 
     expect((await call("GET", "/api/v1/setup/calendar", undefined, "51")).statusCode).toBe(403);
     expect((await call("PUT", "/api/v1/setup/calendar", CALENDAR, "51")).statusCode).toBe(403);

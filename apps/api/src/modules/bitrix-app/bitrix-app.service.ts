@@ -108,16 +108,21 @@ export class BitrixAppService {
     declaredInFile: boolean,
   ): Promise<TenantRecord> {
     const setup = tenant.config.setup ?? {};
+    if (setup.calendarSource === "manual") return tenant;
     if (declaredInFile) {
       return this.deps.store.tenants.update(tenant.id, {
-        config: { ...tenant.config, setup: { ...setup, calendarSource: "manual" } },
+        config: { ...tenant.config, setup: { ...setup, calendarSource: "file" } },
       });
     }
-    if (setup.calendarSource === "manual") return tenant;
     try {
-      const calendar = await readCompanyCalendar(this.deps.portal, tenant, new Date());
+      const read = await readCompanyCalendar(this.deps.portal, tenant, new Date());
       return await this.deps.store.tenants.update(tenant.id, {
-        config: { ...tenant.config, calendar, setup: { ...setup, calendarSource: "bitrix24" } },
+        config: {
+          ...tenant.config,
+          calendar: read.calendar,
+          recurringHolidays: read.recurringHolidays,
+          setup: { ...setup, calendarSource: "bitrix24" },
+        },
       });
     } catch (error) {
       this.deps.log.warn(
@@ -169,10 +174,14 @@ export class BitrixAppService {
           }
         : {}),
       ...(configured?.setup ? { setup: configured.setup } : {}),
-      // Calendário: o do arquivo, se ele declarar um; senão o que já estava gravado.
-      calendar: file?.calendarDeclared
-        ? file.config.calendar
-        : (configured?.calendar ?? base.calendar),
+      // Calendário: o ajustado na tela vale mais que tudo; depois o do arquivo; depois o gravado.
+      calendar:
+        configured?.setup?.calendarSource === "manual"
+          ? configured.calendar
+          : file?.calendarDeclared
+            ? file.config.calendar
+            : (configured?.calendar ?? base.calendar),
+      ...(configured?.recurringHolidays ? { recurringHolidays: configured.recurringHolidays } : {}),
     };
     let tenant = await this.deps.store.tenants.upsert({
       domain,

@@ -30,11 +30,13 @@ export interface SituationMapping {
 export interface SetupMilestones {
   editorsConfirmedAt?: string;
   mappingConfirmedAt?: string;
-  calendarSource?: "bitrix24" | "default" | "manual";
+  calendarSource?: "bitrix24" | "default" | "manual" | "file";
 }
 
 export interface TenantConfig {
   calendar: BusinessCalendar;
+  /** Feriados que se repetem todo ano ("MM-DD"), somados ao calendário em cada ano (ver effectiveCalendar). */
+  recurringHolidays?: string[];
   fieldMapping: FieldMapping;
   situations?: SituationMapping;
   setup?: SetupMilestones;

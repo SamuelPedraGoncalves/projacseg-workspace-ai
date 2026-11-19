@@ -15,6 +15,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { SessionSigner } from "../../security/session";
 import type { Store, TenantRecord } from "../../store/types";
+import { keepRecurringStillPresent } from "../tenants/calendar";
 import { pilotUsers } from "../tenants/pilot";
 import { requireSession, type Access } from "./access";
 import { suggestMapping, validateMapping } from "./mapping";
@@ -42,7 +43,9 @@ export interface SetupRoutesOptions {
   /** Mapeamento salvo: recarregar o catálogo do CRM e ressincronizar os negócios. */
   onMappingSaved?: (tenant: TenantRecord) => void;
   /** Lê o calendário da empresa no Bitrix24. */
-  readCalendar?: (tenant: TenantRecord) => Promise<CompanyCalendar>;
+  readCalendar?: (
+    tenant: TenantRecord,
+  ) => Promise<{ calendar: CompanyCalendar; recurringHolidays: string[] }>;
   /** Lê a estrutura da empresa no Bitrix24. */
   readStructure?: (tenant: TenantRecord) => Promise<DepartmentNode[]>;
 }
@@ -262,9 +265,9 @@ export async function setupRoutes(app: FastifyInstance, options: SetupRoutesOpti
       return reply.code(403).send({ error: "Sem acesso a Configurações." });
     if (!options.readCalendar)
       return reply.code(503).send({ error: "Leitura do portal indisponível." });
-    let calendar: CompanyCalendar;
+    let read: { calendar: CompanyCalendar; recurringHolidays: string[] };
     try {
-      calendar = await options.readCalendar(auth.tenant);
+      read = await options.readCalendar(auth.tenant);
     } catch (error) {
       request.log.warn({ err: error }, "Calendário não lido do Bitrix24.");
       return reply.code(502).send({
@@ -275,7 +278,8 @@ export async function setupRoutes(app: FastifyInstance, options: SetupRoutesOpti
     const updated = await options.store.tenants.update(auth.tenant.id, {
       config: {
         ...auth.tenant.config,
-        calendar,
+        calendar: read.calendar,
+        recurringHolidays: read.recurringHolidays,
         setup: { ...auth.tenant.config.setup, calendarSource: "bitrix24" },
       },
     });
@@ -296,6 +300,11 @@ export async function setupRoutes(app: FastifyInstance, options: SetupRoutesOpti
       config: {
         ...auth.tenant.config,
         calendar: parsed.data,
+        recurringHolidays: keepRecurringStillPresent(
+          auth.tenant.config.recurringHolidays ?? [],
+          parsed.data.holidays,
+          now(),
+        ),
         setup: { ...auth.tenant.config.setup, calendarSource: "manual" },
       },
     });

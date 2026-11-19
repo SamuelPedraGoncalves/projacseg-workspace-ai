@@ -266,7 +266,20 @@ describe("instalação e abertura no Bitrix24", () => {
     await fromFile.app.inject(request);
     const fileTenant = (await fromFile.store.tenants.findByMemberId("membro-1"))!;
     expect(fileTenant.config.calendar.holidays).toEqual(["2026-11-20"]);
-    expect(fileTenant.config.setup?.calendarSource).toBe("manual");
+    expect(fileTenant.config.setup?.calendarSource).toBe("file");
+
+    // Ajuste feito na tela depois vale mais que o arquivo, mesmo reinstalando.
+    await fromFile.store.tenants.update(fileTenant.id, {
+      config: {
+        ...fileTenant.config,
+        calendar: { ...fileTenant.config.calendar, holidays: ["2026-11-20", "2026-12-24"] },
+        setup: { ...fileTenant.config.setup, calendarSource: "manual" },
+      },
+    });
+    await fromFile.app.inject(request);
+    const afterEdit = (await fromFile.store.tenants.findById(fileTenant.id))!;
+    expect(afterEdit.config.calendar.holidays).toEqual(["2026-11-20", "2026-12-24"]);
+    expect(afterEdit.config.setup?.calendarSource).toBe("manual");
     await fromFile.app.close();
   });
 
