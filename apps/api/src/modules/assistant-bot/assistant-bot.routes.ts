@@ -78,10 +78,9 @@ export async function assistantBotRoutes(app: FastifyInstance, options: Assistan
     ) {
       message = ASSISTANT_MESSAGES.pilotOnly;
     } else if (event === "ONIMBOTV2JOINCHAT") {
-      message =
-        options.assistant.aiConfigured && tenant.config.aiEnabled
-          ? ASSISTANT_MESSAGES.welcome
-          : ASSISTANT_MESSAGES.notConnected;
+      message = (await options.assistant.aiAvailable(tenant))
+        ? ASSISTANT_MESSAGES.welcome
+        : ASSISTANT_MESSAGES.notConnected;
     } else if (event === "ONIMBOTV2MESSAGEADD") {
       const userId = authorId;
       if (!userId) return reply.send({ ok: true, ignored: true });

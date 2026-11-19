@@ -1,5 +1,6 @@
 import formbody from "@fastify/formbody";
 import { ruleFieldNames } from "@projacseg/engine";
+import type { TermsDocument } from "@projacseg/shared";
 import Fastify, { type FastifyInstance } from "fastify";
 import { randomBytes } from "node:crypto";
 import qs from "qs";
@@ -33,6 +34,8 @@ import type { DealSource, SuperiorResolver } from "./modules/engine/ports";
 import { EngineScheduler } from "./modules/engine/scheduler";
 import { healthRoutes } from "./modules/health/health.routes";
 import { journeyRoutes } from "./modules/journey/journey.routes";
+import { setupRoutes } from "./modules/setup/setup.routes";
+import { aiAllowed } from "./modules/setup/terms";
 import { registerWebApp } from "./modules/web-app/web-app.routes";
 import { SessionSigner } from "./security/session";
 import { TokenCipher } from "./security/token-cipher";
@@ -51,6 +54,8 @@ export interface AppDeps {
   messenger?: Messenger;
   assistantBot?: AssistantBot;
   now?: () => Date;
+  /** Termos vigentes (os testes injetam uma versão nova). */
+  terms?: TermsDocument;
 }
 
 /**
@@ -151,7 +156,14 @@ export async function buildApp(env: Env, deps: AppDeps = {}): Promise<FastifyIns
     log: app.log,
     now,
   });
-  const assistant = new AssistantService(store, llm, env.AI_REDACT_CLIENT_NAMES, now, actions);
+  const assistant = new AssistantService(
+    store,
+    llm,
+    env.AI_REDACT_CLIENT_NAMES,
+    now,
+    actions,
+    (tenant) => aiAllowed(store, tenant, deps.terms),
+  );
   const verifier = new PortalEventVerifier(
     store,
     env.BITRIX24_ALLOWED_DOMAINS,
@@ -182,6 +194,12 @@ export async function buildApp(env: Env, deps: AppDeps = {}): Promise<FastifyIns
     ai: llm ? llm.name : "none",
   });
   await app.register(journeyRoutes, { store, signer, now });
+  await app.register(setupRoutes, {
+    store,
+    signer,
+    now,
+    ...(deps.terms ? { terms: deps.terms } : {}),
+  });
   await app.register(crmEventsRoutes, { verifier, engine });
   await app.register(assistantBotRoutes, { verifier, bot: assistantBot, assistant, store, signer });
   await registerWebApp(app, {

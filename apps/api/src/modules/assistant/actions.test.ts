@@ -3,7 +3,7 @@ import type { CrmCatalog, FieldInfo } from "../../integrations/bitrix24/crm-read
 import type { LlmPlan, LlmProvider } from "../../integrations/llm/llm-provider";
 import { createMemoryStore } from "../../store/memory-store";
 import type { Store, TenantRecord } from "../../store/types";
-import { at, seedTenant, snapshot } from "../../test/helpers";
+import { acceptTerms, at, seedTenant, snapshot } from "../../test/helpers";
 import { AssistantActions, parseUserDate } from "./actions";
 import { AssistantService } from "./assistant.service";
 
@@ -61,6 +61,7 @@ interface World {
 async function world(failUpdate = false): Promise<World> {
   const store = createMemoryStore();
   const seeded = await seedTenant(store);
+  await acceptTerms(store, seeded.id);
   const tenant = await store.tenants.update(seeded.id, {
     config: {
       ...seeded.config,

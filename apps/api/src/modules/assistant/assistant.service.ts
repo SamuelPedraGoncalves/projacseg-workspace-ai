@@ -5,6 +5,7 @@ import { buildJourney } from "../journey/journey.service";
 import { isObserving, subjectOf } from "../tenants/pilot";
 import { ACTION_TOOLS, type AssistantActions } from "./actions";
 import { FORMAT_RULES, highlightDeals, toBitrixChat } from "./chat-format";
+import { aiAllowed } from "../setup/terms";
 
 export const ASSISTANT_MESSAGES = {
   notConnected:
@@ -162,10 +163,18 @@ export class AssistantService {
     private readonly redactNames: boolean,
     private readonly now: () => Date = () => new Date(),
     private readonly actions: AssistantActions | null = null,
+    /** IA liberada para a corretora (ligada e termos vigentes aceitos). */
+    private readonly aiGate: (tenant: TenantRecord) => Promise<boolean> = (tenant) =>
+      aiAllowed(store, tenant),
   ) {}
 
   get aiConfigured(): boolean {
     return this.provider !== null;
+  }
+
+  /** Provedor configurado e IA liberada para esta corretora. */
+  async aiAvailable(tenant: TenantRecord): Promise<boolean> {
+    return this.provider !== null && (await this.aiGate(tenant));
   }
 
   async reply(
@@ -174,7 +183,7 @@ export class AssistantService {
     userName: string,
     question: string,
   ): Promise<string> {
-    if (!tenant || !this.provider || !tenant.config.aiEnabled)
+    if (!tenant || !this.provider || !(await this.aiGate(tenant)))
       return ASSISTANT_MESSAGES.notConnected;
 
     // Modo de observação (piloto): mostra os negócios de outro colaborador, só para leitura.

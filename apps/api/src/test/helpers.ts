@@ -3,6 +3,7 @@ import { vi } from "vitest";
 import { buildApp, type AppDeps } from "../app";
 import { loadEnv } from "../config/env";
 import type { Bitrix24Response, Bitrix24RestClient } from "../integrations/bitrix24/rest-client";
+import { CURRENT_TERMS } from "../modules/setup/terms";
 import { DEFAULT_TENANT_CONFIG } from "../modules/tenants/tenant-config";
 import { TokenCipher } from "../security/token-cipher";
 import { createMemoryStore } from "../store/memory-store";
@@ -110,4 +111,16 @@ export async function testApp(env: Record<string, string> = {}, deps: AppDeps = 
     },
   );
   return { app, store };
+}
+
+/** Registra o aceite dos termos vigentes pelo administrador (libera a IA nos testes que a usam). */
+export async function acceptTerms(store: Store, tenantId: string, userId = "1") {
+  await store.consents.append({
+    tenantId,
+    userId,
+    kind: "terms",
+    version: CURRENT_TERMS.version,
+    provisional: CURRENT_TERMS.provisional,
+    acceptedAt: new Date(),
+  });
 }

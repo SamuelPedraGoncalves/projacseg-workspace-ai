@@ -6,6 +6,7 @@ import {
   DOMAIN,
   SESSION_SECRET,
   fakeRest,
+  acceptTerms,
   seedTenant,
   snapshot,
   testApp,
@@ -75,6 +76,7 @@ describe("bot do assistente (imbot.v2)", () => {
       { restClient: rest.client, llm: { name: "fake", answer } },
     );
     const tenant = await seedTenant(store);
+    await acceptTerms(store, tenant.id);
     await store.deals.upsert(tenant.id, snapshot());
 
     await post(app, eventBody());
@@ -129,6 +131,20 @@ describe("bot do assistente (imbot.v2)", () => {
     await app.close();
   });
 
+  it("termos vigentes não aceitos: aviso honesto, sem chamar a IA", async () => {
+    const rest = fakeRest();
+    const answer = vi.fn<LlmProvider["answer"]>();
+    const { app, store } = await testApp(
+      {},
+      { restClient: rest.client, llm: { name: "fake", answer } },
+    );
+    await seedTenant(store); // aiEnabled: true, mas sem aceite
+    await post(app, eventBody());
+    expect(sent(rest.calls)?.params.fields).toEqual({ message: ASSISTANT_MESSAGES.notConnected });
+    expect(answer).not.toHaveBeenCalled();
+    await app.close();
+  });
+
   it("falha da IA não deixa o colaborador sem resposta", async () => {
     const rest = fakeRest();
     const { app, store } = await testApp(
@@ -138,7 +154,7 @@ describe("bot do assistente (imbot.v2)", () => {
         llm: { name: "fake", answer: async () => ({ ok: false, reason: "rate_limited" }) },
       },
     );
-    await seedTenant(store);
+    await acceptTerms(store, (await seedTenant(store)).id);
     await post(app, eventBody());
     expect(sent(rest.calls)?.params.fields).toEqual({ message: ASSISTANT_MESSAGES.failure });
     await app.close();

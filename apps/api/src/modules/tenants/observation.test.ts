@@ -13,6 +13,7 @@ import {
   ENCRYPTION_KEY,
   RULE,
   SESSION_SECRET,
+  acceptTerms,
   at,
   fakeRest,
   seedTenant,
@@ -29,6 +30,7 @@ import { loadTenantFile } from "./tenant-config";
 // Usuário 7 (piloto) observa o colaborador 8, que continua fora do piloto.
 async function observing(store: Store): Promise<TenantRecord> {
   const tenant = await seedTenant(store);
+  await acceptTerms(store, tenant.id);
   return store.tenants.update(tenant.id, {
     config: { ...tenant.config, pilotUserIds: ["7"], pilotViewAs: { "7": "8" } },
   });
