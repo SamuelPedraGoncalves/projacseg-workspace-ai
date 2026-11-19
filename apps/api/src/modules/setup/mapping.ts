@@ -79,8 +79,8 @@ const fieldCode = z.string().regex(/^UF_CRM_[A-Z0-9_]+$/);
 
 const mappingSchema = z.object({
   fieldMapping: z.object({
-    insuranceType: fieldCode,
-    branch: fieldCode,
+    insuranceType: fieldCode.optional(),
+    branch: fieldCode.optional(),
     validity: fieldCode.optional(),
     cpf: fieldCode.optional(),
     quoteNumber: fieldCode.optional(),
@@ -115,10 +115,18 @@ export function validateMapping(input: unknown, catalog: MappingCatalog): Mappin
   for (const id of categoryIds) {
     if (!categories.has(id)) errors.push(`O funil "${id}" não existe neste portal.`);
   }
-  if (newBusinessValues.length === 0) errors.push("Escolha ao menos um valor de seguro novo.");
-  if (renewalValues.length === 0) errors.push("Escolha ao menos um valor de renovação.");
+  // Campos ausentes no portal só desligam a função que depende deles: nunca travam o primeiro acesso.
+  const valueCount = newBusinessValues.length + renewalValues.length;
+  if (!value.fieldMapping.insuranceType && valueCount > 0) {
+    errors.push("Escolha o campo do tipo do seguro antes de indicar os valores.");
+  }
+  if (value.fieldMapping.insuranceType && valueCount === 0) {
+    errors.push("Escolha ao menos um valor de seguro novo ou de renovação.");
+  }
 
-  const typeField = fields.get(value.fieldMapping.insuranceType);
+  const typeField = value.fieldMapping.insuranceType
+    ? fields.get(value.fieldMapping.insuranceType)
+    : undefined;
   if (typeField && !typeField.items) {
     errors.push(
       `O campo "${typeField.label}" precisa ser uma lista para indicar o tipo do seguro.`,

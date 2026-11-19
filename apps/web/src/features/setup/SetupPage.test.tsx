@@ -176,3 +176,34 @@ describe("primeiro acesso", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 });
+
+describe("mapeamento sem campos obrigatórios", () => {
+  it("corretora sem campo de ramo consegue salvar; dicas não prometem funções futuras", async () => {
+    const calls = fakeApi({
+      "GET /api/v1/setup": () => ({ body: status("mapping") }),
+      "GET /api/v1/setup/mapping": () => ({
+        body: {
+          ...MAPPING,
+          suggestion: {
+            fieldMapping: { insuranceType: "UF_CRM_TIPO" },
+            situations: { categoryIds: ["0"], newBusinessValues: ["1"] },
+          },
+        },
+      }),
+      "PUT /api/v1/setup/mapping": () => ({ body: { ok: true } }),
+    });
+    const user = userEvent.setup();
+    renderApp("/configurar", sessionPlatform());
+
+    expect(await screen.findByLabelText("Ramo")).toHaveValue("");
+    expect(screen.queryByText("(obrigatório)")).not.toBeInTheDocument();
+    expect(screen.queryByText(/busca de negócios|assistente/i)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Salvar e começar" }));
+    await waitFor(() =>
+      expect(calls.find((call) => call.method === "PUT")?.body).toEqual({
+        fieldMapping: { insuranceType: "UF_CRM_TIPO" },
+        situations: { categoryIds: ["0"], newBusinessValues: ["1"], renewalValues: [] },
+      }),
+    );
+  });
+});

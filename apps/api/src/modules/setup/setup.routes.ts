@@ -5,6 +5,7 @@ import type {
   DepartmentNode,
   MappingCatalog,
   MappingInput,
+  MappingSuggestion,
   MappingView,
   PortalUserRef,
   SetupStatus,
@@ -50,18 +51,26 @@ export interface SetupRoutesOptions {
   readStructure?: (tenant: TenantRecord) => Promise<DepartmentNode[]>;
 }
 
+/** Mapeamento confirmado na tela (só existe depois de salvar). */
 function currentMapping(tenant: TenantRecord): MappingInput | null {
-  const { fieldMapping, situations } = tenant.config;
-  if (!situations || !fieldMapping.insuranceType || !fieldMapping.branch) return null;
-  return {
-    fieldMapping: {
-      ...fieldMapping,
-      insuranceType: fieldMapping.insuranceType,
-      branch: fieldMapping.branch,
-    },
-    situations,
-  };
+  if (!tenant.config.setup?.mappingConfirmedAt || !tenant.config.situations) return null;
+  return { fieldMapping: tenant.config.fieldMapping, situations: tenant.config.situations };
 }
+
+/**
+ * Sugestão para a tela: campos já configurados para a corretora (ex.: arquivo da empresa) vêm
+ * primeiro; o resto, pelos rótulos.
+ */
+function suggestionFor(tenant: TenantRecord, catalog: MappingCatalog): MappingSuggestion {
+  const suggestion = suggestMapping(catalog);
+  const known = new Set(catalog.fields.map((field) => field.code));
+  const configured = Object.fromEntries(
+    Object.entries(tenant.config.fieldMapping).filter(([, code]) => code && known.has(code)),
+  );
+  return { ...suggestion, fieldMapping: { ...suggestion.fieldMapping, ...configured } };
+}
+
+const CATALOG_ERROR = "Não foi possível ler os campos do Bitrix24. Tente de novo em instantes.";
 
 function nextStep(tenant: TenantRecord, access: Access, accepted: boolean): SetupStep {
   const pending: SetupStep | null = !accepted
@@ -214,11 +223,17 @@ export async function setupRoutes(app: FastifyInstance, options: SetupRoutesOpti
     if (!auth.access.settings)
       return reply.code(403).send({ error: "Sem acesso a Configurações." });
     if (!options.catalog) return reply.code(503).send({ error: "Leitura do CRM indisponível." });
-    const catalog = await options.catalog(auth.tenant);
+    let catalog: MappingCatalog;
+    try {
+      catalog = await options.catalog(auth.tenant);
+    } catch (error) {
+      request.log.warn({ err: error }, "Campos do CRM não lidos para o mapeamento.");
+      return reply.code(502).send({ error: CATALOG_ERROR });
+    }
     const view: MappingView = {
       catalog,
       current: currentMapping(auth.tenant),
-      suggestion: suggestMapping(catalog),
+      suggestion: suggestionFor(auth.tenant, catalog),
       confirmed: Boolean(auth.tenant.config.setup?.mappingConfirmedAt),
     };
     return reply.header("Cache-Control", "no-store").send(view);
@@ -230,7 +245,14 @@ export async function setupRoutes(app: FastifyInstance, options: SetupRoutesOpti
     if (!auth.access.settings)
       return reply.code(403).send({ error: "Sem acesso a Configurações." });
     if (!options.catalog) return reply.code(503).send({ error: "Leitura do CRM indisponível." });
-    const result = validateMapping(request.body, await options.catalog(auth.tenant));
+    let catalog: MappingCatalog;
+    try {
+      catalog = await options.catalog(auth.tenant);
+    } catch (error) {
+      request.log.warn({ err: error }, "Campos do CRM não lidos para validar o mapeamento.");
+      return reply.code(502).send({ error: CATALOG_ERROR });
+    }
+    const result = validateMapping(request.body, catalog);
     if (!result.ok) return reply.code(400).send({ errors: result.errors });
     const updated = await options.store.tenants.update(auth.tenant.id, {
       config: {

@@ -6,27 +6,24 @@ import { SetupApiError } from "./setup-api";
 type FieldKey = keyof MappingInput["fieldMapping"];
 type Situation = "none" | "new" | "renewal";
 
-const FIELDS: { key: FieldKey; label: string; required: boolean; hint: string }[] = [
+/**
+ * Nenhum campo é obrigatório: se o portal não tiver um deles, a função que depende dele fica
+ * desligada e o primeiro acesso não trava.
+ */
+const FIELDS: { key: FieldKey; label: string; hint: string }[] = [
   {
     key: "insuranceType",
     label: "Tipo do seguro",
-    required: true,
-    hint: "Campo de lista que diz se o negócio é seguro novo ou renovação.",
+    hint: "Campo de lista que diz se o negócio é seguro novo ou renovação. Sem ele, o WorkSeg não separa as duas situações.",
   },
-  { key: "branch", label: "Ramo", required: true, hint: "Automóvel, residencial, vida…" },
-  { key: "validity", label: "Vigência", required: false, hint: "Data usada nas renovações." },
-  { key: "cpf", label: "CPF", required: false, hint: "Usado na busca de negócios." },
-  {
-    key: "quoteNumber",
-    label: "Número do cálculo",
-    required: false,
-    hint: "Usado na busca de negócios.",
-  },
+  { key: "branch", label: "Ramo", hint: "Automóvel, residencial, vida…" },
+  { key: "validity", label: "Vigência", hint: "Data de vigência da apólice." },
+  { key: "cpf", label: "CPF", hint: "CPF ou CNPJ do cliente." },
+  { key: "quoteNumber", label: "Número do cálculo", hint: "Número do cálculo da cotação." },
   {
     key: "lossReason",
     label: "Motivo de perda",
-    required: false,
-    hint: "Sem ele, o assistente não descarta negócios pelo chat.",
+    hint: "Motivo registrado quando o negócio é perdido.",
   },
 ];
 
@@ -161,14 +158,10 @@ export function MappingForm({
           <div key={field.key} className="grid gap-1">
             <div className="flex items-center text-sm font-medium">
               <label htmlFor={`${id}-${field.key}`}>{field.label}</label>
-              {field.required ? (
-                <span className="ml-1 text-(--text-secondary)">(obrigatório)</span>
-              ) : null}
               {suggested(field.key) ? <SuggestionBadge /> : null}
             </div>
             <select
               id={`${id}-${field.key}`}
-              aria-required={field.required}
               className={selectClass}
               value={state.fields[field.key] ?? ""}
               onChange={(event) =>
@@ -179,7 +172,7 @@ export function MappingForm({
                 }))
               }
             >
-              <option value="">{field.required ? "Escolha um campo" : "Não usar"}</option>
+              <option value="">Não usar (o portal não tem este campo)</option>
               {view.catalog.fields.map((option) => (
                 <option key={option.code} value={option.code}>
                   {option.label}

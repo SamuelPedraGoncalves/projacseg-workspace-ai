@@ -44,8 +44,8 @@ export interface MappingCatalog {
 /** O que a corretora confirma no mapeamento. */
 export interface MappingInput {
   fieldMapping: {
-    insuranceType: string;
-    branch: string;
+    insuranceType?: string;
+    branch?: string;
     validity?: string;
     cpf?: string;
     quoteNumber?: string;

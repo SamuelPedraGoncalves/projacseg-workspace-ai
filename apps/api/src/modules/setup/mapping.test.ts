@@ -119,7 +119,7 @@ describe("validação do mapeamento", () => {
     const result = validateMapping(
       {
         fieldMapping: { insuranceType: "UF_CRM_DOC", branch: "UF_CRM_RAMO" },
-        situations: { categoryIds: [], newBusinessValues: ["1"], renewalValues: [] },
+        situations: { categoryIds: [], newBusinessValues: [], renewalValues: [] },
       },
       CATALOG,
     );
@@ -128,7 +128,7 @@ describe("validação do mapeamento", () => {
       expect.arrayContaining([
         'O campo "CPF/CNPJ" precisa ser uma lista para indicar o tipo do seguro.',
         "Escolha ao menos um funil.",
-        "Escolha ao menos um valor de renovação.",
+        "Escolha ao menos um valor de seguro novo ou de renovação.",
       ]),
     );
   });
@@ -140,5 +140,32 @@ describe("validação do mapeamento", () => {
     );
     expect(!funnel.ok && funnel.errors).toEqual(['O funil "99" não existe neste portal.']);
     expect(validateMapping({ fieldMapping: "x" }, CATALOG).ok).toBe(false);
+  });
+});
+
+describe("corretora sem algum campo não fica travada no primeiro acesso", () => {
+  it("sem ramo e só com seguro novo é válido", () => {
+    const input = {
+      fieldMapping: { insuranceType: "UF_CRM_TIPO" },
+      situations: { categoryIds: ["0"], newBusinessValues: ["9829"], renewalValues: [] },
+    };
+    expect(validateMapping(input, CATALOG)).toEqual({ ok: true, value: input });
+  });
+
+  it("sem campo de tipo do seguro é válido, desde que não haja valores", () => {
+    const input = {
+      fieldMapping: {},
+      situations: { categoryIds: ["0"], newBusinessValues: [], renewalValues: [] },
+    };
+    expect(validateMapping(input, CATALOG).ok).toBe(true);
+    expect(
+      validateMapping(
+        { ...input, situations: { ...input.situations, renewalValues: ["9831"] } },
+        CATALOG,
+      ),
+    ).toEqual({
+      ok: false,
+      errors: ["Escolha o campo do tipo do seguro antes de indicar os valores."],
+    });
   });
 });

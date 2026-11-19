@@ -544,3 +544,44 @@ describe("estrutura da empresa em Configurações", () => {
     await app.close();
   });
 });
+
+describe("mapeamento: leitura do CRM e mapeamento já existente", () => {
+  it("falha ao ler os campos do Bitrix24 → 502 em português", async () => {
+    const rest = fakeRest({ "crm.category.list": new Error("QUERY_LIMIT_EXCEEDED") });
+    const { app, store } = await testApp({}, { restClient: rest.client });
+    const tenant = await setup(store);
+    for (const method of ["GET", "PUT"] as const) {
+      const response = await app.inject({
+        method,
+        url: "/api/v1/setup/mapping",
+        headers: bearer(tenant, ADMIN),
+        ...(method === "PUT" ? { payload: { fieldMapping: {}, situations: {} } } : {}),
+      });
+      expect(response.statusCode).toBe(502);
+      expect(response.json().error).toBe(
+        "Não foi possível ler os campos do Bitrix24. Tente de novo em instantes.",
+      );
+    }
+    await app.close();
+  });
+
+  it("campos já configurados para a corretora entram na sugestão", async () => {
+    const rest = fakeRest({
+      "crm.category.list": { categories: [] },
+      "crm.status.list": [],
+      "crm.deal.fields": {
+        UF_CRM_RAMO: { type: "enumeration", formLabel: "Ramo", items: [] },
+        UF_CRM_LINHA: { type: "enumeration", formLabel: "Linha de produto", items: [] },
+      },
+    });
+    const { app, store } = await testApp({}, { restClient: rest.client });
+    const tenant = await setup(store, { fieldMapping: { branch: "UF_CRM_LINHA" } });
+    const view = await app.inject({
+      method: "GET",
+      url: "/api/v1/setup/mapping",
+      headers: bearer(tenant, ADMIN),
+    });
+    expect(view.json().suggestion.fieldMapping.branch).toBe("UF_CRM_LINHA");
+    await app.close();
+  });
+});
